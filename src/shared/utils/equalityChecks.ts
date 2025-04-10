@@ -36,10 +36,11 @@ export const isEqual = (a: unknown, b: unknown): boolean => {
     return false; // Objects have different number of keys
   }
 
+  const setB = new Set(keysB); // Use a Set for O(1) lookups
   let j = 0;
   while (j < keysA.length) {
     const key = keysA[j];
-    if (!keysB.includes(key) || !isEqual(objA[key], objB[key])) {
+    if (!setB.has(key) || !isEqual(objA[key], objB[key])) {
       return false; // Keys are different or their values are not equal
     }
     j += 1;

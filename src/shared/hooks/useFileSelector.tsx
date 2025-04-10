@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, DragEvent, ChangeEvent } from "react";
-import { ErrorMessage, FileData, IFileUploaderProps } from "../types/types";
+import { ErrorMessage, FileData, IFileUploaderProps, IFileSelectorClasses } from "../types/types";
 import {
   defaultTypeExtensions,
   maximumUploadCount as maxUploadCount,
@@ -42,7 +42,7 @@ export const useFileSelector = ({
     maxUploadErrorRef.current.message = status
       ? `You have attempted to upload ${fileCount} files. The maximum allowable uploads for this feature is ${maximumUploads}`
       : "";
-    setUpdateTrigger((state) => (state += 1));
+    setUpdateTrigger((state: number) => (state += 1));
   }, []);
 
   const setMaximumFileSizeExceeded = useCallback((status = false) => {
@@ -50,7 +50,7 @@ export const useFileSelector = ({
     maxFileSizeErrorRef.current.message = status
       ? `You have attempted upload a file(s) that exceeds the maximum size of ${printableMaximumFileSize}`
       : "";
-    setUpdateTrigger((state) => (state += 1));
+    setUpdateTrigger((state: number) => (state += 1));
   }, []);
 
   const clearCache = useCallback(() => {
@@ -190,16 +190,23 @@ export const useFileSelector = ({
     });
   }, [validFiles]);
 
-  const FileSelectorRef = useRef(() => (
-    <FileSelector
-      acceptTypes={acceptTypes}
-      onChange={onInputChange}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-    />
-  ));
+
+  const FileSelectorRef = useRef(
+    ({ inputClassName, clickableAreaClassName, dropZoneWrapperClassName, messageParagraphClassName }: IFileSelectorClasses) => (
+      <FileSelector
+        acceptTypes={acceptTypes}
+        inputClassName={inputClassName}
+        clickableAreaClassName={clickableAreaClassName}
+        dropZoneWrapperClassName={dropZoneWrapperClassName}
+        messageParagraphClassName={messageParagraphClassName}
+        onChange={onInputChange}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+      />
+    ),
+  );
 
   return {
     //Properties

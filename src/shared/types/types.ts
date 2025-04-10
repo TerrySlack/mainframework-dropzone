@@ -1,13 +1,16 @@
 import { ChangeEvent, DragEvent } from "react";
 
-export interface FileSelectorProps {
-  inputId?: string;
-  acceptTypes?: string;
-  messageParagraph?: string;
+export interface IFileSelectorClasses {
   inputClassName?: string;
   clickableAreaClassName?: string;
   dropZoneWrapperClassName?: string;
   messageParagraphClassName?: string;
+}
+
+export interface FileSelectorProps extends IFileSelectorClasses {
+  inputId?: string;
+  acceptTypes?: string;
+  messageParagraph?: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onDragOver: (e: DragEvent<HTMLButtonElement>) => void;
   onDrop: (e: DragEvent<HTMLButtonElement>) => void;
