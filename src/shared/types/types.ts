@@ -8,6 +8,13 @@ export interface FileSelectorProps {
   clickableAreaClassName?: string;
   dropZoneWrapperClassName?: string;
   messageParagraphClassName?: string;
+  /** Accessible name for the drop zone region (default: "File upload") */
+  ariaLabel?: string;
+  /** ID of element that describes the drop zone (e.g. help text) */
+  ariaDescribedBy?: string;
+  /** Accessible label for the file input button when messageParagraph is not sufficient */
+  ariaLabelButton?: string;
+  ariaLabelledBy?: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onDragOver: (e: DragEvent<HTMLButtonElement>) => void;
   onDrop: (e: DragEvent<HTMLButtonElement>) => void;

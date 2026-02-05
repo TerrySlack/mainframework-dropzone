@@ -3,7 +3,9 @@
   "exclude": ["dist", "node_modules"],
   "compilerOptions": {
     "module": "ESNEXT",
+    "moduleResolution": "Bundler",
     "lib": ["dom", "esnext"],
+    "target": "esnext",
     "declaration": true,
     "sourceMap": true,
     "rootDir": "./src",
@@ -13,10 +15,10 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "moduleResolution": "node",
     "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "emitDeclarationOnly": true
   }
 }

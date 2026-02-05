@@ -1,0 +1,10 @@
+---
+description: "No intermediate reasoning or commentary; only final results."
+alwaysApply: true
+---
+
+Do not output any internal reasoning, intermediate steps, partial thoughts, plans, logs, or progress commentary.
+Do not explain what you are doing.
+Do not stream partial results.
+Only output the final, completed answer, code change, or result when the task is fully done.
+If the user explicitly asks for details or a step-by-step explanation, provide it; otherwise, remain silent until completion.
