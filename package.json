@@ -1,6 +1,6 @@
 {
   "name": "@mainframework/dropzone",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "A file selection package, without all of the re-rendering issues that come with other dropzone packages",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
