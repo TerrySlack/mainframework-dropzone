@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState, DragEvent, ChangeEvent } from "react";
-import { ErrorMessage, FileData, IFileUploaderProps } from "../types/types";
+"use client";
+import { useCallback, useRef, useState, DragEvent, ChangeEvent, useMemo } from "react";
+import { ErrorMessage, FileData, FileSelectorProps, IFileUploaderProps } from "../types/types";
 import {
   defaultTypeExtensions,
   maximumUploadCount as maxUploadCount,
@@ -16,7 +17,6 @@ import { useCustomCallback } from "./useCustomCallback";
 import { FileSelector } from "../components/FileSelector";
 
 export const useFileSelector = ({
-  acceptTypes,
   maximumUploadCount = maxUploadCount,
   maximumFileSize = maxFileSize,
   acceptedTypes = defaultTypeExtensions,
@@ -53,14 +53,26 @@ export const useFileSelector = ({
     setUpdateTrigger((state) => (state += 1));
   }, []);
 
-  const clearCache = useCallback(() => {
-    //Clear any blobs held in memor
+  const clearBlobs = useCustomCallback(() => {
+    //Remove any blobs created in memory
+    let i = 0;
+    while (i < validFiles.length) {
+      const file = validFiles[i].file;
+      if (file instanceof File) {
+        clearBlobFromMemory(file);
+      }
+      i++;
+    }
+  }, [validFiles]);
+
+  const clearCache = useCustomCallback(() => {
+    //Clear any blobs held in memory
     clearBlobs();
     SetInvalidFiles([]);
     SetValidFiles([]);
-  }, []);
+  }, [clearBlobs]);
 
-  const onCancel = useCallback(() => {
+  const onCancel = useCustomCallback(() => {
     clearCache();
   }, [clearCache]);
 
@@ -85,44 +97,71 @@ export const useFileSelector = ({
 
         onCancel();
       } else {
-        const { valid, invalid } = files.reduce(
-          (acc, file: File) => {
-            if (isValidFileType(file, acceptedTypes))
-              acc.valid.push(SvgXmlnsAttributeCheck(file, defaultTypeExtensions));
-            else acc.invalid.push(file);
-            return acc;
-          },
-          { valid: [] as Promise<FileData>[], invalid: [] as File[] },
-        );
+        const valid: Promise<FileData | null>[] = [];
+        const invalid: File[] = [];
+
+        let i = 0;
+        while (i < files.length) {
+          const file = files[i];
+          if (isValidFileType(file, acceptedTypes)) {
+            valid.push(SvgXmlnsAttributeCheck(file, acceptedTypes));
+          } else {
+            invalid.push(file);
+          }
+          i++;
+        }
 
         if (valid.length > 0) {
-          Promise.all(valid).then((results) => {
-            //validFiles.next(results);
-            SetValidFiles(results);
-          });
+          Promise.all(valid)
+            .then((results) => {
+              const filteredResults: FileData[] = [];
+              let j = 0;
+              while (j < results.length) {
+                const result = results[j];
+                if (result !== null) {
+                  filteredResults.push(result);
+                }
+                j++;
+              }
+              SetValidFiles(filteredResults);
+            })
+            .catch((error) => {
+              console.error("File processing error:", error);
+              // Optionally expose error state to engineers
+              SetInvalidFiles(invalid.concat(files)); // Treat all as invalid on error
+            });
         }
 
         if (invalid.length > 0) {
-          //invalidFiles.next(invalid);
           SetInvalidFiles(invalid);
         }
       }
     },
-    [SvgXmlnsAttributeCheck, checkFilesMaximumSize, setMaximumFileSizeExceeded, setMaximumUploadsExceeded],
+    [
+      acceptedTypes,
+      maximumFileSize,
+      maximumUploadCount,
+      setMaximumFileSizeExceeded,
+      setMaximumUploadsExceeded,
+      onCancel,
+    ],
   );
 
   const onRemoveFile = useCustomCallback(
     (index: number) => {
-      //
-      const updatedValidFiles = validFiles.reduce((acc, file: FileData, i: number) => {
+      const updatedValidFiles: FileData[] = [];
+      let i = 0;
+      while (i < validFiles.length) {
         if (i === index) {
-          clearBlobFromMemory(file.url);
+          const file = validFiles[i].file;
+          if (file instanceof File) {
+            clearBlobFromMemory(file);
+          }
         } else {
-          acc.push(file);
+          updatedValidFiles.push(validFiles[i]);
         }
-        return acc;
-      }, [] as FileData[]);
-
+        i++;
+      }
       SetValidFiles(updatedValidFiles);
     },
     [validFiles],
@@ -139,7 +178,7 @@ export const useFileSelector = ({
     SetValidFiles(updatedValidFiles);
   }, []);
 
-  const onInputChange = useCallback(
+  const onInputChange = useCustomCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
       processFiles(files);
@@ -149,7 +188,7 @@ export const useFileSelector = ({
 
   //Drag and Drop
 
-  const onDrop = useCallback(
+  const onDrop = useCustomCallback(
     (e: DragEvent<HTMLButtonElement>) => {
       e.preventDefault();
       processFiles(Array.from(e.dataTransfer.files));
@@ -183,23 +222,55 @@ export const useFileSelector = ({
     }, 200);
   }, []);
 
-  const clearBlobs = useCustomCallback(() => {
-    //Remove any blobs created in memory
-    validFiles.forEach(({ url }) => {
-      clearBlobFromMemory(url);
-    });
-  }, [validFiles]);
+  // const FileSelectorRef = useRef(() => (
+  //   <FileSelector
+  //     acceptTypes={acceptTypes}
+  //     onChange={onInputChange}
+  //     onDragOver={onDragOver}
+  //     onDrop={onDrop}
+  //     onDragEnter={onDragEnter}
+  //     onDragLeave={onDragLeave}
+  //   />
+  // ));
+  // In useFileSelector.ts, create a wrapper component
+  const createFileSelectorComponent = (handlers: {
+    onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
+    onDragOver: (e: DragEvent<HTMLButtonElement>) => void;
+    onDrop: (e: DragEvent<HTMLButtonElement>) => void;
+    onDragEnter: (e: DragEvent<HTMLButtonElement>) => void;
+    onDragLeave: (e: DragEvent<HTMLButtonElement>) => void;
+  }) => {
+    // Return a component that accepts only the visual/accessibility props
+    const Component = (
+      props: Omit<FileSelectorProps, "onChange" | "onDragOver" | "onDrop" | "onDragEnter" | "onDragLeave">,
+    ) => (
+      <FileSelector
+        {...props}
+        onChange={handlers.onInputChange}
+        onDragOver={handlers.onDragOver}
+        onDrop={handlers.onDrop}
+        onDragEnter={handlers.onDragEnter}
+        onDragLeave={handlers.onDragLeave}
+      />
+    );
 
-  const FileSelectorRef = useRef(() => (
-    <FileSelector
-      acceptTypes={acceptTypes}
-      onChange={onInputChange}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-    />
-  ));
+    Component.displayName = "FileSelectorWrapper"; // <-- fix the ESLint warning
+
+    return Component;
+  };
+
+  // Then in the hook's return:
+  const BoundFileSelector = useMemo(
+    () =>
+      createFileSelectorComponent({
+        onInputChange,
+        onDragOver,
+        onDrop,
+        onDragEnter,
+        onDragLeave,
+      }),
+    [onInputChange, onDragOver, onDrop, onDragEnter, onDragLeave],
+  );
 
   return {
     //Properties
@@ -222,6 +293,6 @@ export const useFileSelector = ({
     setMaximumUploadsExceeded,
 
     //Component - Export the FileSelector
-    FileSelector: FileSelectorRef.current,
+    FileSelector: BoundFileSelector,
   };
 };
