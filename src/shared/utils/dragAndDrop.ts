@@ -1,3 +1,4 @@
+"use client";
 import { SyntheticEvent } from "react";
 
 export const withDragDefaults = <E extends SyntheticEvent>(handler: (e: E) => void) => {

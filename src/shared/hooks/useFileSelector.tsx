@@ -1,3 +1,4 @@
+"use client";
 import { useCallback, useRef, useState, DragEvent, ChangeEvent, useMemo } from "react";
 import { ErrorMessage, FileData, FileSelectorProps, IFileUploaderProps } from "../types/types";
 import {

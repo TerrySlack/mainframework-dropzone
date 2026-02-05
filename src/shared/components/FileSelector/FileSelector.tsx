@@ -1,8 +1,13 @@
+"use client";
+
 import { memo, useRef, useCallback, useId, DragEvent } from "react";
 import { FileSelectorProps } from "../../types/types";
 import { mergeStyles } from "../../utils/mergeStyles";
 
 import "./tailwind.css";
+if (typeof window !== "undefined") {
+  import("./tailwind.css");
+}
 import { withDragDefaults } from "../../utils/dragAndDrop";
 const defaultAcceptTypes =
   ".png, .jpg, .jpeg, .pdf, .svg, image/svg+xml, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document";

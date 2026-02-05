@@ -1,3 +1,4 @@
+"use client";
 //Use this to quickly get the file extensions
 //Devs can pass their own custom type mappings to override these defaults
 
