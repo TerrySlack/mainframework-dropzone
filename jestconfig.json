@@ -2,7 +2,13 @@
   "transform": {
     "^.+\\.(t|j)sx?$": "ts-jest"
   },
-  "testRegex": "(/tests/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+  "testRegex": "tests/.*\\.(test|spec)\\.(jsx?|tsx?)$",
+  "testPathIgnorePatterns": ["/node_modules/", "setup\\.ts$"],
   "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
-  "testEnvironment": "jsdom"
+  "moduleNameMapper": {
+    "\\.(css|less|scss|sass)$": "<rootDir>/tests/__mocks__/styleMock.js",
+    "^@mainframework/is-deep-equal$": "<rootDir>/tests/__mocks__/is-deep-equal.ts"
+  },
+  "testEnvironment": "jsdom",
+  "setupFilesAfterEnv": ["<rootDir>/tests/setup.ts"]
 }
