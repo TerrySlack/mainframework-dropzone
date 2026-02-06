@@ -10,6 +10,14 @@ npm i @mainframework/dropzone
 yarn add @mainframework/dropzone
 ```
 
+## Running Tests
+
+```bash
+yarn test
+# or
+npm run test
+```
+
 ## Hook Configuration
 
 The `useFileSelector` hook accepts optional configuration:
