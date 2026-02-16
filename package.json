@@ -2,9 +2,15 @@
   "name": "@mainframework/dropzone",
   "version": "1.0.17",
   "description": "A file selection package, without all of the re-rendering issues that come with other dropzone packages",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/esm/index.d.ts",
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TerrySlack/mainframework-dropzone.git"
@@ -21,10 +27,8 @@
     "lint": "eslint --ext 'ts,tsx' --max-warnings=0 --fix",
     "lint-staged": "lint-staged",
     "prebuild": "yarn husky && yarn clean",
-    "copy:css": "copyfiles -a -u 4 src/shared/components/FileSelector/tailwind.css dist/esm/shared/components/FileSelector/",
-    "build": "cross-env yarn prebuild && yarn build:css:prod && yarn build:esm && yarn copy:css",
-    "build:esm": "tsc",
-    "build:cjs": "tsc --module commonjs --outDir dist/cjs",
+    "copy:css": "copyfiles -a -u 4 src/shared/components/FileSelector/tailwind.css dist/shared/components/FileSelector/",
+    "build": "cross-env yarn prebuild && yarn build:css:prod && tsc && yarn copy:css",
     "test": "jest --config jestconfig.json"
   },
   "peerDependencies": {
