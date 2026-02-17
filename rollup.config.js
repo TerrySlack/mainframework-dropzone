@@ -1,7 +1,6 @@
 import resolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
 import dts from "rollup-plugin-dts";
-import postcss from "rollup-plugin-postcss";
 
 export default [
   // JavaScript/TypeScript bundle
@@ -19,16 +18,10 @@ export default [
         declaration: false,
         declarationDir: undefined,
       }),
-      postcss({
-        extract: "shared/components/FileSelector/tailwind.css",
-        minimize: true,
-      }),
     ],
     external: [
       "react",
       "react-dom",
-      "clsx",
-      "tailwind-merge",
     ],
   },
   // TypeScript declarations bundle
@@ -39,6 +32,5 @@ export default [
       format: "es",
     },
     plugins: [dts()],
-    external: [/\.css$/],
   },
 ];

@@ -1,6 +1,6 @@
 {
   "name": "@mainframework/dropzone",
-  "version": "1.0.22",
+  "version": "1.0.21",
   "description": "A file selection package, without all of the re-rendering issues that come with other dropzone packages",
   "type": "module",
   "module": "./dist/index.js",
@@ -21,16 +21,15 @@
   "homepage": "https://github.com/TerrySlack/mainframework-dropzone#readme",
   "scripts": {
     "build:css:dev": "npx @tailwindcss/cli -i ./src/index.css -o ./src/shared/components/FileSelector/tailwind.css --watch",
+    "build:css:prod": "npx @tailwindcss/cli -i ./src/index.css -o ./src/shared/components/FileSelector/tailwind.css --minify",
     "husky": "husky",
     "clean": "rimraf dist",
     "lint": "eslint --ext 'ts,tsx' --max-warnings=0 --fix",
     "lint-staged": "lint-staged",
     "prebuild": "yarn husky && yarn clean",
-    "build": "rollup -c",
+    "copy:css": "copyfiles -a -u 4 src/shared/components/FileSelector/tailwind.css dist/shared/components/FileSelector/",
+    "build": "yarn build:css:prod && rollup -c && yarn copy:css",
     "test": "jest --config jestconfig.json"
-  },
-  "dependencies": {
-    "@mainframework/is-deep-equal": "^1.0.10"
   },
   "peerDependencies": {
     "react": ">=19"
@@ -54,6 +53,11 @@
   ],
   "author": "Terry Slack",
   "license": "MIT",
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint-staged && git add --all"
+    }
+  },
   "lint-staged": {
     "*.(ts|tsx)": [
       "eslint --fix",
@@ -61,7 +65,7 @@
     ]
   },
   "devDependencies": {
-    "@mainframework/is-deep-equal": "1.0.10",
+    "@mainframework/is-deep-equal": "^1.0.10",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
@@ -91,7 +95,6 @@
     "rimraf": "^6.1.3",
     "rollup": "^4.57.1",
     "rollup-plugin-dts": "^6.3.0",
-    "rollup-plugin-postcss": "^4.0.2",
     "tailwind-merge": "^3.4.1",
     "tailwindcss": "^4.1.18",
     "ts-jest": "^29.4.6",
