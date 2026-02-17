@@ -3,16 +3,19 @@ import typescript from "@rollup/plugin-typescript";
 import dts from "rollup-plugin-dts";
 
 export default [
-  // JavaScript/TypeScript bundle
   {
     input: "src/index.ts",
     output: {
       file: "dist/index.js",
       format: "es",
       sourcemap: true,
+      banner: '"use client";',
     },
     plugins: [
-      resolve(),
+      resolve({
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        browser: true,  // Use browser-friendly versions
+      }),
       typescript({
         tsconfig: "./tsconfig.json",
         declaration: false,
@@ -22,9 +25,10 @@ export default [
     external: [
       "react",
       "react-dom",
+      "react/jsx-runtime",
+      /\.css$/,
     ],
   },
-  // TypeScript declarations bundle
   {
     input: "src/index.ts",
     output: {
@@ -32,5 +36,6 @@ export default [
       format: "es",
     },
     plugins: [dts()],
+    external: [/\.css$/],
   },
 ];
