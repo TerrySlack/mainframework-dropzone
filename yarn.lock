@@ -717,10 +717,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@mainframework/is-deep-equal@^1.0.9":
-  version "1.0.9"
-  resolved "https://registry.yarnpkg.com/@mainframework/is-deep-equal/-/is-deep-equal-1.0.9.tgz#81b9e9b8afdcf174ecd00e5e7a93974ec6e18ea4"
-  integrity sha512-PZX9sQJ59eD5MDKwAJbSSTDhQl0drjpU+kW6aOJ/sup5o/5RUasa7y5vi8Xka3UjjkthJddpFJskvfXeJKNS7A==
+"@mainframework/is-deep-equal@^1.0.10":
+  version "1.0.10"
+  resolved "https://registry.yarnpkg.com/@mainframework/is-deep-equal/-/is-deep-equal-1.0.10.tgz#9483ec843c0531e27bdc77cbe0351e28b731968e"
+  integrity sha512-xo+Xro04/fYeK+zRN2WCI0m0zY//yF9wrhk2r9HeG4iVKIkP4o3cNAEG/zq8OigFhIpOK2FTXuZG5PL6ex+zrw==
 
 "@napi-rs/wasm-runtime@^0.2.11":
   version "0.2.12"
