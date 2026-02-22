@@ -5,13 +5,12 @@ import { FileSelectorProps } from "../../types/types";
 import { mergeStyles } from "../../utils/mergeStyles";
 
 import "./tailwind.css";
-if (typeof window !== "undefined") {
-  import("./tailwind.css");
-}
+
 import { withDragDefaults } from "../../utils/dragAndDrop";
 const defaultAcceptTypes =
   ".png, .jpg, .jpeg, .pdf, .svg, image/svg+xml, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
+const SCOPE_CLASS = "file-selector-scope";
 const defaultInputClassName = "hiddenInput";
 const defaultClickableAreaClassName =
   "dropzone border-dashed border-2 border-gray-500 p-4 rounded-md text-center cursor-pointer bg-inherit hover:border-gray-400 text-inherit font-bold py-2 px-4";
@@ -97,7 +96,7 @@ const FileSelectorComponent = ({
       role="group"
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
-      className={resolvedDropZoneWrapperClassName}
+      className={mergeStyles(SCOPE_CLASS, resolvedDropZoneWrapperClassName)}
       draggable={false}
     >
       <button
