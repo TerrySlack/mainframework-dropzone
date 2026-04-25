@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import "@testing-library/jest-dom";
 
 // Mock URL.createObjectURL and URL.revokeObjectURL for blob URL tests

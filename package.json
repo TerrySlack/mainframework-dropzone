@@ -28,7 +28,6 @@
     "lint-staged": "lint-staged",
     "prebuild": "yarn husky && yarn clean",
     "copy:cssOld": "copyfiles -a -u 4 src/shared/components/FileSelector/tailwind.css dist/shared/components/FileSelector/",
-    "buildOld": "yarn build:css:prod && rollup -c && yarn copy:css",
     "build": "yarn build:css:prod && rollup -c",
     "test": "jest --config jestconfig.json"
   },
