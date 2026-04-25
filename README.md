@@ -66,11 +66,11 @@ The hook returns the following:
 
 | Export         | Description                                                                                                                    |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `FileSelector` | A pre-wired dropzone component. Renders a clickable area and hidden file input, with drag-and-drop handlers bound to the hook. |
+| `FileSelector` | A pre-wired dropzone component returned **only** from `useFileSelector()` (not a separate import from `@mainframework/dropzone`). Renders a clickable area and hidden file input, with file and drag-and-drop handlers bound to that hook instance. |
 
-### FileSelector Props
+### FileSelector props (`FileSelectorViewProps`)
 
-When rendering `FileSelector`, you can pass:
+The `FileSelector` from the hook accepts **view-only** props (styling, copy, accessibility, `acceptTypes`). Do not pass `onChange` or drag handlers; the hook supplies those. When rendering it, you can pass:
 
 | Prop                        | Type     | Default                                                   | Description                                  |
 | --------------------------- | -------- | --------------------------------------------------------- | -------------------------------------------- |

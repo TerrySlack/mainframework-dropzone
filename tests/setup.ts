@@ -4,8 +4,8 @@ import "@testing-library/jest-dom";
 const createObjectURL = jest.fn((blob: Blob) => `blob:mock-${Math.random()}-${blob.size}`);
 const revokeObjectURL = jest.fn();
 
-global.URL.createObjectURL = createObjectURL;
-global.URL.revokeObjectURL = revokeObjectURL;
+globalThis.URL.createObjectURL = createObjectURL;
+globalThis.URL.revokeObjectURL = revokeObjectURL;
 
 // Polyfill Blob.text() for jsdom (used by SvgXmlnsAttributeCheck)
 if (typeof Blob !== "undefined" && !Blob.prototype.text) {
