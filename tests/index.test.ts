@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { useFileSelector } from "../src/index";
 
 describe("index", () => {

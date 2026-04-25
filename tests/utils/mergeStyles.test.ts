@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { mergeStyles } from "../../src/shared/utils/mergeStyles";
 
 describe("mergeStyles", () => {

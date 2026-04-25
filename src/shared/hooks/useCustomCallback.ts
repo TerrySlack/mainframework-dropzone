@@ -1,4 +1,3 @@
-"use client";
 import { useRef } from "react";
 import { isEqual } from "@mainframework/is-deep-equal";
 

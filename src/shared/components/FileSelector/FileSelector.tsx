@@ -1,5 +1,3 @@
-"use client";
-
 import { memo, useRef, useCallback, useId, DragEvent } from "react";
 import { FileSelectorProps } from "../../types/types";
 import { mergeStyles } from "../../utils/mergeStyles";

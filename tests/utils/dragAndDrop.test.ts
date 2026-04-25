@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { withDragDefaults } from "../../src/shared/utils/dragAndDrop";
 
 describe("withDragDefaults", () => {

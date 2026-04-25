@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { renderHook, act } from "@testing-library/react";
 import { useCustomCallback } from "../../src/shared/hooks/useCustomCallback";
 

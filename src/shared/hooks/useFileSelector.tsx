@@ -1,6 +1,11 @@
-"use client";
 import { useCallback, useRef, useState, DragEvent, ChangeEvent, useMemo } from "react";
-import { ErrorMessage, FileData, FileSelectorProps, IFileUploaderProps } from "../types/types";
+import {
+  ErrorMessage,
+  FileData,
+  FileSelectorHandlerProps,
+  FileSelectorViewProps,
+  IFileUploaderProps,
+} from "../types/types";
 import {
   defaultTypeExtensions,
   maximumUploadCount as maxUploadCount,
@@ -222,17 +227,6 @@ export const useFileSelector = ({
     }, 200);
   }, []);
 
-  // const FileSelectorRef = useRef(() => (
-  //   <FileSelector
-  //     acceptTypes={acceptTypes}
-  //     onChange={onInputChange}
-  //     onDragOver={onDragOver}
-  //     onDrop={onDrop}
-  //     onDragEnter={onDragEnter}
-  //     onDragLeave={onDragLeave}
-  //   />
-  // ));
-  // In useFileSelector.ts, create a wrapper component
   const createFileSelectorComponent = (handlers: {
     onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
     onDragOver: (e: DragEvent<HTMLButtonElement>) => void;
@@ -240,21 +234,17 @@ export const useFileSelector = ({
     onDragEnter: (e: DragEvent<HTMLButtonElement>) => void;
     onDragLeave: (e: DragEvent<HTMLButtonElement>) => void;
   }) => {
-    // Return a component that accepts only the visual/accessibility props
-    const Component = (
-      props: Omit<FileSelectorProps, "onChange" | "onDragOver" | "onDrop" | "onDragEnter" | "onDragLeave">,
-    ) => (
-      <FileSelector
-        {...props}
-        onChange={handlers.onInputChange}
-        onDragOver={handlers.onDragOver}
-        onDrop={handlers.onDrop}
-        onDragEnter={handlers.onDragEnter}
-        onDragLeave={handlers.onDragLeave}
-      />
-    );
+    const handlerProps: FileSelectorHandlerProps = {
+      onChange: handlers.onInputChange,
+      onDragOver: handlers.onDragOver,
+      onDrop: handlers.onDrop,
+      onDragEnter: handlers.onDragEnter,
+      onDragLeave: handlers.onDragLeave,
+    };
 
-    Component.displayName = "FileSelectorWrapper"; // <-- fix the ESLint warning
+    const Component = (props: FileSelectorViewProps) => <FileSelector {...props} {...handlerProps} />;
+
+    Component.displayName = "FileSelectorWrapper";
 
     return Component;
   };

@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { renderHook, act, render, fireEvent } from "@testing-library/react";
 import { useFileSelector } from "../../src/shared/hooks/useFileSelector";
 
