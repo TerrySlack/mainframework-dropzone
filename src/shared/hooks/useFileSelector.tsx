@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState, DragEvent, ChangeEvent, useMemo } from "react";
+import { useCallback, useRef, useState, DragEvent, ChangeEvent, useMemo, useEffect } from "react";
 import {
   ErrorMessage,
   FileData,
   FileSelectorHandlerProps,
+  FileSelectorInternalProps,
   FileSelectorViewProps,
   IFileUploaderProps,
 } from "../types/types";
@@ -20,6 +21,31 @@ import {
 
 import { useCustomCallback } from "./useCustomCallback";
 import { FileSelector } from "../components/FileSelector";
+
+const buildAcceptString = (acceptedTypes: Record<string, string>): string => {
+  const seen = new Set<string>();
+
+  // Prefer extensions (input accept supports extensions and MIME types)
+  for (const ext of Object.values(acceptedTypes)) {
+    const trimmed = ext.trim();
+    if (!trimmed) continue;
+    if (!trimmed.startsWith(".")) {
+      const withDot = `.${trimmed}`;
+      if (!seen.has(withDot)) seen.add(withDot);
+      continue;
+    }
+    if (!seen.has(trimmed)) seen.add(trimmed);
+  }
+
+  // Add MIME keys too (helps some pickers)
+  for (const mime of Object.keys(acceptedTypes)) {
+    const trimmed = mime.trim();
+    if (!trimmed) continue;
+    if (!seen.has(trimmed)) seen.add(trimmed);
+  }
+
+  return Array.from(seen).join(", ");
+};
 
 export const useFileSelector = ({
   maximumUploadCount = maxUploadCount,
@@ -47,7 +73,7 @@ export const useFileSelector = ({
     maxUploadErrorRef.current.message = status
       ? `You have attempted to upload ${fileCount} files. The maximum allowable uploads for this feature is ${maximumUploads}`
       : "";
-    setUpdateTrigger((state) => (state += 1));
+    setUpdateTrigger((state) => state + 1);
   }, []);
 
   const setMaximumFileSizeExceeded = useCallback((status = false) => {
@@ -55,7 +81,7 @@ export const useFileSelector = ({
     maxFileSizeErrorRef.current.message = status
       ? `You have attempted upload a file(s) that exceeds the maximum size of ${printableMaximumFileSize}`
       : "";
-    setUpdateTrigger((state) => (state += 1));
+    setUpdateTrigger((state) => state + 1);
   }, []);
 
   const clearBlobs = useCustomCallback(() => {
@@ -76,6 +102,12 @@ export const useFileSelector = ({
     SetInvalidFiles([]);
     SetValidFiles([]);
   }, [clearBlobs]);
+
+  useEffect(() => {
+    return () => {
+      clearCache();
+    };
+  }, [clearCache]);
 
   const onCancel = useCustomCallback(() => {
     clearCache();
@@ -233,6 +265,7 @@ export const useFileSelector = ({
     onDrop: (e: DragEvent<HTMLButtonElement>) => void;
     onDragEnter: (e: DragEvent<HTMLButtonElement>) => void;
     onDragLeave: (e: DragEvent<HTMLButtonElement>) => void;
+    accept: string;
   }) => {
     const handlerProps: FileSelectorHandlerProps = {
       onChange: handlers.onInputChange,
@@ -242,7 +275,10 @@ export const useFileSelector = ({
       onDragLeave: handlers.onDragLeave,
     };
 
-    const Component = (props: FileSelectorViewProps) => <FileSelector {...props} {...handlerProps} />;
+    const internalProps: FileSelectorInternalProps = { accept: handlers.accept };
+    const Component = (props: FileSelectorViewProps) => (
+      <FileSelector {...props} {...handlerProps} {...internalProps} />
+    );
 
     Component.displayName = "FileSelectorWrapper";
 
@@ -250,6 +286,7 @@ export const useFileSelector = ({
   };
 
   // Then in the hook's return:
+  const accept = useMemo(() => buildAcceptString(acceptedTypes), [acceptedTypes]);
   const BoundFileSelector = useMemo(
     () =>
       createFileSelectorComponent({
@@ -258,8 +295,9 @@ export const useFileSelector = ({
         onDrop,
         onDragEnter,
         onDragLeave,
+        accept,
       }),
-    [onInputChange, onDragOver, onDrop, onDragEnter, onDragLeave],
+    [onInputChange, onDragOver, onDrop, onDragEnter, onDragLeave, accept],
   );
 
   return {

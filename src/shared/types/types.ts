@@ -3,7 +3,6 @@ import { ChangeEvent, DragEvent } from "react";
 /** Props for styling, copy, and accessibility on the dropzone. Used by the `FileSelector` returned from `useFileSelector`. */
 export interface FileSelectorViewProps {
   inputId?: string;
-  acceptTypes?: string;
   messageParagraph?: string;
   inputClassName?: string;
   clickableAreaClassName?: string;
@@ -27,8 +26,13 @@ export interface FileSelectorHandlerProps {
   onDragLeave: (e: DragEvent<HTMLButtonElement>) => void;
 }
 
+/** Internal props injected by `useFileSelector` (not part of the public view props). */
+export interface FileSelectorInternalProps {
+  accept?: string;
+}
+
 /** Full props for the internal `FileSelector` component (view + handlers). */
-export interface FileSelectorProps extends FileSelectorViewProps, FileSelectorHandlerProps {}
+export interface FileSelectorProps extends FileSelectorViewProps, FileSelectorHandlerProps, FileSelectorInternalProps {}
 
 //Incoming Props
 export interface IFileUploaderProps {
