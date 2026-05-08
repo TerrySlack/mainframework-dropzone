@@ -8,9 +8,6 @@ import globals from "globals";
 // TypeScript ESLint (flat config helper + presets)
 import tseslint from "typescript-eslint";
 
-// React (flat presets)
-import react from "eslint-plugin-react";
-
 // React Hooks
 import reactHooks from "eslint-plugin-react-hooks";
 
@@ -32,20 +29,11 @@ export default defineConfig([
   // 2) Base recommended JS rules (applies to anything we end up linting under src)
   js.configs.recommended,
 
-  // 3) React flat presets
-  //    - recommended rules
-  //    - jsx-runtime to avoid requiring React in scope for JSX (like react/react-in-jsx-scope)
-  {
-    ...react.configs.flat.recommended,
-    settings: { react: { version: "detect" } }, // mirrors your settings.react.version
-  },
-  react.configs.flat["jsx-runtime"],
-
-  // 4) TypeScript ESLint flat presets (roughly replaces the two @typescript-eslint "extends")
+  // 3) TypeScript ESLint flat presets (roughly replaces the two @typescript-eslint "extends")
   //    These bring in parser + rules in flat-config style.
   ...tseslint.configs.recommended,
 
-  // 5) Project-specific tweaks: environment, globals, plugins, rules
+  // 4) Project-specific tweaks: environment, globals, plugins, rules
   {
     files: ["src/**/*.{ts,tsx,js,jsx}"],
     languageOptions: {
@@ -72,9 +60,6 @@ export default defineConfig([
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-explicit-any": "off",
-
-      // In jsx-runtime world, React in scope isn't required:
-      "react/react-in-jsx-scope": "off",
 
       // Prettier: keep as "recommended" style (same intent as your extends)
       // If you want Prettier issues as warnings or errors, use:

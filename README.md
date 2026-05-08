@@ -26,8 +26,30 @@ The `useFileSelector` hook accepts optional configuration:
 const { ... } = useFileSelector({
   maximumUploadCount: 5,      // Default: 30
   maximumFileSize: 5e6,       // Default: 5 MB
-  acceptedTypes: defaultTypeExtensions,  // MIME type map, see below
+  acceptedTypes: defaultTypeExtensions,  // MIME type -> extension map, see below
 });
+```
+
+## Minimal Usage
+
+```tsx
+import { useFileSelector } from "@mainframework/dropzone";
+
+export function Uploader() {
+  const { FileSelector, validFiles, invalidFiles, clearCache } = useFileSelector();
+
+  return (
+    <>
+      <FileSelector messageParagraph="Drop files here or click to select" />
+
+      {invalidFiles.length > 0 && <p role="alert">Some files were rejected.</p>}
+
+      <button type="button" onClick={clearCache} disabled={validFiles.length === 0}>
+        Clear
+      </button>
+    </>
+  );
+}
 ```
 
 ## Hook Exports
@@ -70,12 +92,11 @@ The hook returns the following:
 
 ### FileSelector props (`FileSelectorViewProps`)
 
-The `FileSelector` from the hook accepts **view-only** props (styling, copy, accessibility, `acceptTypes`). Do not pass `onChange` or drag handlers; the hook supplies those. When rendering it, you can pass:
+The `FileSelector` from the hook accepts **view-only** props (styling, copy, accessibility). Do not pass `onChange` or drag handlers; the hook supplies those. When rendering it, you can pass:
 
 | Prop                        | Type     | Default                                                   | Description                                  |
 | --------------------------- | -------- | --------------------------------------------------------- | -------------------------------------------- |
 | `inputId`                   | `string` | auto-generated                                            | ID for the file input (for `aria-controls`). |
-| `acceptTypes`               | `string` | `.png, .jpg, .jpeg, .pdf, .svg, ...`                      | `accept` attribute for the file input.       |
 | `messageParagraph`          | `string` | "Drag 'n' drop some files here, or click to select files" | Text shown in the dropzone.                  |
 | `inputClassName`            | `string` | `"hiddenInput"`                                           | CSS classes for the hidden input.            |
 | `clickableAreaClassName`    | `string` | Tailwind dropzone styles                                  | CSS classes for the clickable area.          |
@@ -130,7 +151,7 @@ export const App = () => {
 
   return (
     <>
-      <FileSelector messageParagraph="Drop files here or click to select" acceptTypes=".png,.jpg,.jpeg,.pdf" />
+      <FileSelector messageParagraph="Drop files here or click to select" />
 
       {maxUploadError.status && <p role="alert">{maxUploadError.message}</p>}
       {maxFileSizeError.status && <p role="alert">{maxFileSizeError.message}</p>}
@@ -148,6 +169,25 @@ export const App = () => {
   );
 };
 ```
+
+## Cleanup / memory
+
+- Prefer clearing via the provided methods:
+  - `clearCache()` / `onCancel()` to clear files and revoke blob URLs
+  - `onRemoveFile(index)` to remove one file and revoke its blob URL
+  - `clearBlobs()` to revoke blob URLs without clearing arrays
+- When the hook instance unmounts, it clears internal state and revokes any blob URLs it created.
+- Mutating the `validFiles` array directly (for example `validFiles.length = 0`) is not a supported way to clear files/blobs; use `clearCache()` instead so blob URLs are properly revoked.
+
+## Exported types
+
+If you need types externally, the package exports:
+
+- `FileData`
+- `ErrorMessage`
+- `IFileUploaderProps`
+- `FileSelectorViewProps`
+- `FileSelectorHandlerProps`
 
 ## Manipulating validFiles in a Preview Component
 

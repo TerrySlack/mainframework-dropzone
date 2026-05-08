@@ -5,7 +5,7 @@ import { mergeStyles } from "../../utils/mergeStyles";
 import "./tailwind.css";
 
 import { withDragDefaults } from "../../utils/dragAndDrop";
-const defaultAcceptTypes =
+const defaultAccept =
   ".png, .jpg, .jpeg, .pdf, .svg, image/svg+xml, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const SCOPE_CLASS = "file-selector-scope";
@@ -22,7 +22,7 @@ const defaultAriaLabelButton = "Choose files to upload";
 
 const FileSelectorComponent = ({
   inputId,
-  acceptTypes = defaultAcceptTypes,
+  accept = defaultAccept,
   messageParagraph = defaultMessageParagraph,
   inputClassName,
   clickableAreaClassName,
@@ -122,7 +122,7 @@ const FileSelectorComponent = ({
         type="file"
         className={inputClasses}
         onChange={onChange}
-        accept={acceptTypes}
+        accept={accept}
         multiple
         aria-hidden="true"
         tabIndex={-1}

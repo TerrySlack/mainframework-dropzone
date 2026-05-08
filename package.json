@@ -27,7 +27,6 @@
     "lint": "eslint --ext 'ts,tsx' --max-warnings=0 --fix",
     "lint-staged": "lint-staged",
     "prebuild": "yarn husky && yarn clean",
-    "copy:cssOld": "copyfiles -a -u 4 src/shared/components/FileSelector/tailwind.css dist/shared/components/FileSelector/",
     "build": "yarn build:css:prod && rollup -c",
     "test": "jest --config jestconfig.json"
   },
@@ -68,6 +67,7 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@mainframework/is-deep-equal": "^1.0.10",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
@@ -87,11 +87,12 @@
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
     "husky": "^9.1.7",
     "jest": "^30.4.0",
     "jest-canvas-mock": "^2.5.2",
     "jest-environment-jsdom": "^30.4.0",
-    "lint-staged": "^17.0.2",
+    "lint-staged": "16.1.0",
     "postcss": "^8.5.14",
     "postcss-cli": "^11.0.1",
     "postcss-prefix-selector": "^2.1.1",
