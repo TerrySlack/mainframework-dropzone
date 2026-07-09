@@ -105,7 +105,6 @@ The `FileSelector` from the hook accepts **view-only** props (styling, copy, acc
 | `ariaLabel`                 | `string` | "File upload drop zone"                                   | Accessible name for the drop zone.           |
 | `ariaDescribedBy`           | `string` | —                                                         | ID of element that describes the drop zone.  |
 | `ariaLabelButton`           | `string` | "Choose files to upload"                                  | Accessible label for the button.             |
-| `ariaLabelledBy`            | `string` | —                                                         | ID of element that labels the button.        |
 
 ## Default Accepted Types
 
@@ -172,11 +171,19 @@ export const App = () => {
 
 ## Cleanup / memory
 
-- Prefer clearing via the provided methods:
-  - `clearCache()` / `onCancel()` to clear files and revoke blob URLs
-  - `onRemoveFile(index)` to remove one file and revoke its blob URL
-  - `clearBlobs()` to revoke blob URLs without clearing arrays
-- When the hook instance unmounts, it clears internal state and revokes any blob URLs it created.
+> **Warning: memory management is the caller's responsibility.** The hook does **not** automatically revoke blob URLs on unmount. You **must** call `clearBlobs()` or `clearCache()` yourself — for example in a `useEffect` cleanup, on cancel, or after a successful upload — to prevent memory leaks.
+
+```tsx
+useEffect(() => {
+  return () => {
+    clearBlobs(); // revoke all blob URLs when the component unmounts
+  };
+}, [clearBlobs]);
+```
+
+- Use `clearCache()` / `onCancel()` to clear files **and** revoke blob URLs.
+- Use `onRemoveFile(index)` to remove one file and revoke its blob URL.
+- Use `clearBlobs()` to revoke blob URLs without clearing the file arrays.
 - Mutating the `validFiles` array directly (for example `validFiles.length = 0`) is not a supported way to clear files/blobs; use `clearCache()` instead so blob URLs are properly revoked.
 
 ## Exported types

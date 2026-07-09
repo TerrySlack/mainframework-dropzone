@@ -4,7 +4,6 @@
 export const defaultTypeExtensions: Record<string, string> = {
   "image/png": ".png",
   "image/jpeg": ".jpeg",
-  "image/jpg": ".jpg",
   "image/svg+xml": ".svg",
   "application/pdf": ".pdf",
   "application/msword": ".doc",
@@ -12,11 +11,43 @@ export const defaultTypeExtensions: Record<string, string> = {
 };
 
 //This is the attribute that should be present in all svg files
-const xmlns = "<svg xmlns='http://www.w3.org/2000/svg'";
+const xmlns = '<svg xmlns="http://www.w3.org/2000/svg"';
 
 export const maximumUploadCount = 30;
 export const maximumFileSize = 5e6; //5 mb's
 export const printableMaximumFileSize = "5 Megabytes";
+
+export const formatFileSize = (bytes: number): string => {
+  if (bytes >= 1e9) return `${bytes / 1e9} Gigabytes`;
+  if (bytes >= 1e6) return `${bytes / 1e6} Megabytes`;
+  if (bytes >= 1e3) return `${bytes / 1e3} Kilobytes`;
+  return `${bytes} Bytes`;
+};
+
+export const buildAcceptString = (acceptedTypes: Record<string, string>): string => {
+  const seen = new Set<string>();
+
+  // Prefer extensions (input accept supports extensions and MIME types)
+  for (const ext of Object.values(acceptedTypes)) {
+    const trimmed = ext.trim();
+    if (!trimmed) continue;
+    if (!trimmed.startsWith(".")) {
+      const withDot = `.${trimmed}`;
+      if (!seen.has(withDot)) seen.add(withDot);
+      continue;
+    }
+    if (!seen.has(trimmed)) seen.add(trimmed);
+  }
+
+  // Add MIME keys too (helps some pickers)
+  for (const mime of Object.keys(acceptedTypes)) {
+    const trimmed = mime.trim();
+    if (!trimmed) continue;
+    if (!seen.has(trimmed)) seen.add(trimmed);
+  }
+
+  return Array.from(seen).join(", ");
+};
 
 // TYPE DEFINITIONS
 
@@ -61,38 +92,29 @@ export const clearBlobFromMemory = (file: File): void => {
 };
 
 /*
- * Creates a blob URL with automatic cleanup after specified duration.
- * Returns object with url and cancel function for lifecycle control.
+ * Creates a blob URL and returns it alongside a clear function for lifecycle control.
  *
  * @param file - The file to create a URL for
- * @param autoCleanupMs - Milliseconds before auto-cleanup (default: 5 minutes)
- * @returns Object with url and cancel function
+ * @returns Object with url and clear function
  */
-export const createUrlStringWithAutoCleanup = (file: File, autoCleanupMs = 300_000) => {
-  const url = createUrlString(file);
-  const timer = setTimeout(() => {
+export const createUrlStringWithClear = (file: File) => ({
+  url: createUrlString(file),
+  clear: () => {
     clearBlobFromMemory(file);
-  }, autoCleanupMs);
-
-  return {
-    url,
-    cancel: () => {
-      clearTimeout(timer);
-      clearBlobFromMemory(file);
-    },
-  };
-};
+  },
+});
 
 // VALIDATION FUNCTIONS
 
 /*
  * Checks if file type is in accepted types map.
- * Uses 'in' operator for better performance than Boolean() conversion.
+ * Uses Object.hasOwn for better performance than Boolean() conversion.
  */
-export const isValidFileType = (file: File, acceptedTypes: TypeExtensions = defaultTypeExtensions): boolean =>
-  file.type in acceptedTypes;
-
-export const hasSurpassedMaxSize = (file: File | Blob, maxSize = maximumFileSize): boolean => file.size > maxSize;
+export const isValidFileType = (file: File, acceptedTypes: TypeExtensions = defaultTypeExtensions): boolean => {
+  if (Object.hasOwn(acceptedTypes, file.type)) return true;
+  const ext = "." + file.name.split(".").pop()?.toLowerCase();
+  return Object.values(acceptedTypes).some((e) => e.toLowerCase() === ext);
+};
 
 /*
  * Returns true if ANY file exceeds the maximum size limit.
@@ -102,7 +124,7 @@ export const hasSurpassedMaxSize = (file: File | Blob, maxSize = maximumFileSize
 export const checkFilesMaximumSize = (files: readonly (File | Blob)[], max = maximumFileSize): boolean => {
   let i = 0;
   while (i < files.length) {
-    if (files[i].size > max) return true;
+    if ((files[i] as Blob).size > max) return true;
     i++;
   }
   return false;
@@ -130,7 +152,7 @@ const createDocumentData = (file: File, allowableTypes: TypeExtensions = default
  * Optimized SVG xmlns check - only reads first 2KB initially.
  * Avoids toLowerCase() allocation and uses safer regex for replacement.
  */
-export const SvgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExtensions = defaultTypeExtensions) => {
+export const svgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExtensions = defaultTypeExtensions) => {
   if (file.type !== "image/svg+xml") {
     return createDocumentData(file, allowableTypes);
   }
@@ -140,7 +162,7 @@ export const SvgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExt
   const text = await chunk.text();
 
   // No toLowerCase() needed - xmlns attribute is case-sensitive in XML
-  if (text.includes("xmlns=")) {
+  if (/<svg\b[^>]*\bxmlns\s*=/i.test(text)) {
     return createDocumentData(file, allowableTypes);
   }
 
@@ -149,9 +171,10 @@ export const SvgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExt
   const fullText = await file.text();
 
   // SAFER: Use regex with word boundary instead of simple string replace
-  // Handles <svg> without space and various attribute orders
-  const svgWithXmlns = fullText.replace(/<svg\b/, xmlns);
+  // Handles <svg> or <SVG> without space and various attribute orders
+  const svgWithXmlns = fullText.replace(/<svg\b/i, xmlns);
 
+  clearBlobFromMemory(file);
   return createDocumentData(
     new File([svgWithXmlns], file.name, {
       type: file.type,
@@ -186,5 +209,7 @@ export const checkFile = (id: string, file: File | Blob): File | Blob => {
 
   // It's a File - check if renaming is needed
   const currentId = getFileId(file.name);
-  return id === currentId ? file : renameFile(file, id);
+  if (id === currentId) return file;
+  const ext = file.name.slice(file.name.lastIndexOf("."));
+  return renameFile(file, `${id}${ext}`);
 };

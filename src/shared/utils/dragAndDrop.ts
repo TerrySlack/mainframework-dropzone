@@ -1,4 +1,4 @@
-import { SyntheticEvent } from "react";
+import type { SyntheticEvent } from "react";
 
 export const withDragDefaults = <E extends SyntheticEvent>(handler: (e: E) => void) => {
   return (e: E) => {

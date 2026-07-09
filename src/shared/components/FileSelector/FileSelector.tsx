@@ -1,12 +1,13 @@
-import { memo, useRef, useCallback, useId, DragEvent } from "react";
-import { FileSelectorProps } from "../../types/types";
+import { useRef, useId } from "react";
+import type { DragEvent } from "react";
+import type { FileSelectorProps } from "../../types/types";
 import { mergeStyles } from "../../utils/mergeStyles";
 
 import "./tailwind.css";
 
 import { withDragDefaults } from "../../utils/dragAndDrop";
 const defaultAccept =
-  ".png, .jpg, .jpeg, .pdf, .svg, image/svg+xml, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  ".png, .jpeg, .pdf, .svg, image/svg+xml, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const SCOPE_CLASS = "file-selector-scope";
 const defaultInputClassName = "hiddenInput";
@@ -17,10 +18,9 @@ const defaultMessageParagraphClassName = "text-center text-gray-600";
 const defaultMessageParagraph = "Drag 'n' drop some files here, or click to select files";
 
 const defaultAriaLabel = "File upload drop zone";
-const defaultAriaDescribedBy = undefined;
 const defaultAriaLabelButton = "Choose files to upload";
 
-const FileSelectorComponent = ({
+export const FileSelector = ({
   inputId,
   accept = defaultAccept,
   messageParagraph = defaultMessageParagraph,
@@ -29,9 +29,8 @@ const FileSelectorComponent = ({
   dropZoneWrapperClassName,
   messageParagraphClassName,
   ariaLabel = defaultAriaLabel,
-  ariaDescribedBy = defaultAriaDescribedBy,
+  ariaDescribedBy,
   ariaLabelButton = defaultAriaLabelButton,
-  ariaLabelledBy, // New prop for button
   onChange,
   onDragOver,
   onDrop,
@@ -42,42 +41,26 @@ const FileSelectorComponent = ({
   const messageId = useId();
 
   //Note, eslint doesn't like that I'm wrapping the anonymous function in withDragDefaults.  Ignore for now
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const internalOnClick = useCallback(
-    withDragDefaults(() => {
-      fileInputRef.current?.click();
-    }),
-    [],
-  );
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const internalOnDrop = useCallback(
-    withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
-      onDrop(e);
-    }),
-    [onDrop],
-  );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const internalOnDragOver = useCallback(
-    withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
-      onDragOver(e);
-    }),
-    [onDragOver],
-  );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const internalOnDragEnter = useCallback(
-    withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
-      onDragEnter(e);
-    }),
-    [onDragEnter],
-  );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const internalOnDragLeave = useCallback(
-    withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
-      onDragLeave(e);
-    }),
-    [onDragLeave],
-  );
+  const internalOnClick = withDragDefaults(() => {
+    fileInputRef.current?.click();
+  });
+
+  const internalOnDrop = withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
+    onDrop(e);
+  });
+
+  const internalOnDragOver = withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
+    onDragOver(e);
+  });
+
+  const internalOnDragEnter = withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
+    onDragEnter(e);
+  });
+
+  const internalOnDragLeave = withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
+    onDragLeave(e);
+  });
 
   const inputClasses = mergeStyles(defaultInputClassName, inputClassName);
   const resolvedClickableAreaClassName = mergeStyles(
@@ -107,9 +90,7 @@ const FileSelectorComponent = ({
         onDragLeave={internalOnDragLeave}
         draggable={false}
         aria-label={ariaLabelButton}
-        aria-labelledby={ariaLabelledBy ?? messageId}
         aria-controls={resolvedInputId}
-        aria-haspopup="dialog"
       >
         <p id={messageId} className={resolvedMessageParagraphClassName}>
           {messageParagraph}
@@ -130,6 +111,4 @@ const FileSelectorComponent = ({
     </div>
   );
 };
-
-export const FileSelector = memo(FileSelectorComponent);
 FileSelector.displayName = "FileSelector";

@@ -1,64 +1,33 @@
-import { useCallback, useRef, useState, DragEvent, ChangeEvent, useMemo, useEffect } from "react";
+import { useRef, useState } from "react";
+import type { DragEvent, ChangeEvent } from "react";
+import type { ErrorMessage, FileData, FileSelectorViewProps, IFileUploaderProps } from "../types/types";
 import {
-  ErrorMessage,
-  FileData,
-  FileSelectorHandlerProps,
-  FileSelectorInternalProps,
-  FileSelectorViewProps,
-  IFileUploaderProps,
-} from "../types/types";
-import {
+  buildAcceptString,
   defaultTypeExtensions,
   maximumUploadCount as maxUploadCount,
   maximumFileSize as maxFileSize,
-  printableMaximumFileSize,
+  formatFileSize,
   checkFilesMaximumSize,
   isValidFileType,
-  SvgXmlnsAttributeCheck,
+  svgXmlnsAttributeCheck,
   checkFile,
   clearBlobFromMemory,
+  createUrlString,
 } from "../utils/processUploadedFiles";
 
-import { useCustomCallback } from "./useCustomCallback";
 import { FileSelector } from "../components/FileSelector";
-
-const buildAcceptString = (acceptedTypes: Record<string, string>): string => {
-  const seen = new Set<string>();
-
-  // Prefer extensions (input accept supports extensions and MIME types)
-  for (const ext of Object.values(acceptedTypes)) {
-    const trimmed = ext.trim();
-    if (!trimmed) continue;
-    if (!trimmed.startsWith(".")) {
-      const withDot = `.${trimmed}`;
-      if (!seen.has(withDot)) seen.add(withDot);
-      continue;
-    }
-    if (!seen.has(trimmed)) seen.add(trimmed);
-  }
-
-  // Add MIME keys too (helps some pickers)
-  for (const mime of Object.keys(acceptedTypes)) {
-    const trimmed = mime.trim();
-    if (!trimmed) continue;
-    if (!seen.has(trimmed)) seen.add(trimmed);
-  }
-
-  return Array.from(seen).join(", ");
-};
 
 export const useFileSelector = ({
   maximumUploadCount = maxUploadCount,
   maximumFileSize = maxFileSize,
   acceptedTypes = defaultTypeExtensions,
 }: IFileUploaderProps = {}) => {
-  //State
-  //Trigger a re-render
   const [, setUpdateTrigger] = useState<number>(0);
   const [validFiles, SetValidFiles] = useState<FileData[]>([]);
   const [invalidFiles, SetInvalidFiles] = useState<File[]>([]);
 
-  //Refs
+  const dragDepthRef = useRef(0);
+
   const maxUploadErrorRef = useRef<ErrorMessage>({
     status: false,
     message: "",
@@ -68,24 +37,23 @@ export const useFileSelector = ({
     message: "",
   });
 
-  const setMaximumUploadsExceeded = useCallback((status = false, fileCount?: number, maximumUploads?: number) => {
+  const setMaximumUploadsExceeded = (status = false, fileCount?: number, maximumUploads?: number) => {
     maxUploadErrorRef.current.status = status;
     maxUploadErrorRef.current.message = status
       ? `You have attempted to upload ${fileCount} files. The maximum allowable uploads for this feature is ${maximumUploads}`
       : "";
     setUpdateTrigger((state) => state + 1);
-  }, []);
+  };
 
-  const setMaximumFileSizeExceeded = useCallback((status = false) => {
+  const setMaximumFileSizeExceeded = (status = false) => {
     maxFileSizeErrorRef.current.status = status;
     maxFileSizeErrorRef.current.message = status
-      ? `You have attempted upload a file(s) that exceeds the maximum size of ${printableMaximumFileSize}`
+      ? `You have attempted to upload a file(s) that exceeds the maximum size of ${formatFileSize(maximumFileSize)}`
       : "";
     setUpdateTrigger((state) => state + 1);
-  }, []);
+  };
 
-  const clearBlobs = useCustomCallback(() => {
-    //Remove any blobs created in memory
+  const clearBlobs = () => {
     let i = 0;
     while (i < validFiles.length) {
       const file = validFiles[i].file;
@@ -94,218 +62,180 @@ export const useFileSelector = ({
       }
       i++;
     }
-  }, [validFiles]);
+  };
 
-  const clearCache = useCustomCallback(() => {
-    //Clear any blobs held in memory
+  const clearCache = () => {
     clearBlobs();
     SetInvalidFiles([]);
     SetValidFiles([]);
-  }, [clearBlobs]);
+    setMaximumUploadsExceeded(false);
+    setMaximumFileSizeExceeded(false);
+  };
 
-  useEffect(() => {
-    return () => {
-      clearCache();
-    };
-  }, [clearCache]);
-
-  const onCancel = useCustomCallback(() => {
+  const onCancel = () => {
     clearCache();
-  }, [clearCache]);
+  };
 
-  const getValidFileStreams = useCallback(
-    () => (validFiles.length ? validFiles.map(({ file }: FileData) => file) : []),
-    [validFiles],
-  );
+  const getValidFileStreams = () => (validFiles.length ? validFiles.map(({ file }: FileData) => file) : []);
 
-  //Main Engine to deal with files
-  const processFiles = useCustomCallback(
-    (files: File[]) => {
-      const maxFileSizeCheck = checkFilesMaximumSize(files, maximumFileSize) && !maxFileSizeErrorRef.current.status;
+  const processFiles = (files: File[]) => {
+    const maxFileSizeCheck = checkFilesMaximumSize(files, maximumFileSize);
 
-      const maxUploadCountCheck =
-        typeof maximumUploadCount !== "undefined"
-          ? !maxUploadErrorRef.current.status && files.length > maximumUploadCount
-          : false;
-
-      if (maxFileSizeCheck || maxUploadCountCheck) {
-        if (maxFileSizeCheck) setMaximumFileSizeExceeded(true);
-        if (maxUploadCountCheck) setMaximumUploadsExceeded(true, files.length, maximumUploadCount);
-
-        onCancel();
-      } else {
-        const valid: Promise<FileData | null>[] = [];
-        const invalid: File[] = [];
-
-        let i = 0;
-        while (i < files.length) {
-          const file = files[i];
-          if (isValidFileType(file, acceptedTypes)) {
-            valid.push(SvgXmlnsAttributeCheck(file, acceptedTypes));
-          } else {
-            invalid.push(file);
-          }
-          i++;
-        }
-
-        if (valid.length > 0) {
-          Promise.all(valid)
-            .then((results) => {
-              const filteredResults: FileData[] = [];
-              let j = 0;
-              while (j < results.length) {
-                const result = results[j];
-                if (result !== null) {
-                  filteredResults.push(result);
-                }
-                j++;
-              }
-              SetValidFiles(filteredResults);
-            })
-            .catch((error) => {
-              console.error("File processing error:", error);
-              // Optionally expose error state to engineers
-              SetInvalidFiles(invalid.concat(files)); // Treat all as invalid on error
-            });
-        }
-
-        if (invalid.length > 0) {
-          SetInvalidFiles(invalid);
-        }
+    if (maxFileSizeCheck) {
+      if (!maxFileSizeErrorRef.current.status) {
+        setMaximumFileSizeExceeded(true);
       }
-    },
-    [
-      acceptedTypes,
-      maximumFileSize,
-      maximumUploadCount,
-      setMaximumFileSizeExceeded,
-      setMaximumUploadsExceeded,
-      onCancel,
-    ],
-  );
+      SetValidFiles([]);
+      SetInvalidFiles([]);
+    } else {
+      const valid: Promise<FileData | null>[] = [];
+      const invalid: File[] = [];
 
-  const onRemoveFile = useCustomCallback(
-    (index: number) => {
-      const updatedValidFiles: FileData[] = [];
       let i = 0;
-      while (i < validFiles.length) {
-        if (i === index) {
-          const file = validFiles[i].file;
-          if (file instanceof File) {
-            clearBlobFromMemory(file);
-          }
+      while (i < files.length) {
+        const file = files[i];
+        if (isValidFileType(file, acceptedTypes)) {
+          valid.push(svgXmlnsAttributeCheck(file, acceptedTypes));
         } else {
-          updatedValidFiles.push(validFiles[i]);
+          invalid.push(file);
         }
         i++;
       }
-      SetValidFiles(updatedValidFiles);
-    },
-    [validFiles],
-  );
 
-  const onIdChange = useCallback((index: number, id: string, files: FileData[]) => {
+      if (valid.length > 0) {
+        Promise.all(valid)
+          .then((results) => {
+            const filteredResults: FileData[] = [];
+            let j = 0;
+            while (j < results.length) {
+              const result = results[j];
+              if (result !== null) {
+                filteredResults.push(result);
+              }
+              j++;
+            }
+            SetValidFiles((current) => {
+              if (current.length + filteredResults.length > maximumUploadCount) {
+                setMaximumUploadsExceeded(true, current.length + filteredResults.length, maximumUploadCount);
+                return current;
+              }
+              return current.concat(filteredResults);
+            });
+          })
+          .catch((error) => {
+            console.error("File processing error:", error);
+            SetInvalidFiles((state) => state.concat(files));
+          });
+      }
+
+      if (invalid.length > 0) {
+        SetInvalidFiles((state) => state.concat(invalid));
+      }
+    }
+  };
+
+  const onRemoveFile = (index: number) => {
+    const updatedValidFiles: FileData[] = [];
+    let i = 0;
+    while (i < validFiles.length) {
+      if (i === index) {
+        const file = validFiles[i].file;
+        if (file instanceof File) {
+          clearBlobFromMemory(file);
+        }
+      } else {
+        updatedValidFiles.push(validFiles[i]);
+      }
+      i++;
+    }
+    SetValidFiles(updatedValidFiles);
+  };
+
+  const onIdChange = (index: number, id: string, files: FileData[]) => {
     const updatedValidFiles = files.map((fileData: FileData, i: number) => {
       if (i === index) {
+        if (fileData.file instanceof File) clearBlobFromMemory(fileData.file);
         const renamedFile = checkFile(id, fileData.file);
-        return { ...fileData, file: renamedFile, id };
+        const newUrl = renamedFile instanceof File ? createUrlString(renamedFile) : fileData.url;
+        return { ...fileData, file: renamedFile, id, url: newUrl };
       }
       return fileData;
     });
     SetValidFiles(updatedValidFiles);
-  }, []);
-
-  const onInputChange = useCustomCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files || []);
-      processFiles(files);
-    },
-    [processFiles],
-  );
-
-  //Drag and Drop
-
-  const onDrop = useCustomCallback(
-    (e: DragEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      processFiles(Array.from(e.dataTransfer.files));
-    },
-    [processFiles],
-  );
-
-  const onDragOver = useCallback((e: DragEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  }, []);
-
-  const onDragEnter = useCallback((e: DragEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    const { classList } = e.currentTarget;
-    classList.add("border-yellow-400");
-    classList.remove("border-silver-600");
-  }, []);
-
-  const onDragLeave = useCallback((e: DragEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    const currentTarget = e.currentTarget;
-
-    const timeoutId = setTimeout(() => {
-      if (currentTarget && !currentTarget.contains(e.relatedTarget as Node)) {
-        const { classList } = currentTarget;
-        classList.remove("border-yellow-400");
-        classList.add("border-silver-600");
-      }
-      clearTimeout(timeoutId);
-    }, 200);
-  }, []);
-
-  const createFileSelectorComponent = (handlers: {
-    onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-    onDragOver: (e: DragEvent<HTMLButtonElement>) => void;
-    onDrop: (e: DragEvent<HTMLButtonElement>) => void;
-    onDragEnter: (e: DragEvent<HTMLButtonElement>) => void;
-    onDragLeave: (e: DragEvent<HTMLButtonElement>) => void;
-    accept: string;
-  }) => {
-    const handlerProps: FileSelectorHandlerProps = {
-      onChange: handlers.onInputChange,
-      onDragOver: handlers.onDragOver,
-      onDrop: handlers.onDrop,
-      onDragEnter: handlers.onDragEnter,
-      onDragLeave: handlers.onDragLeave,
-    };
-
-    const internalProps: FileSelectorInternalProps = { accept: handlers.accept };
-    const Component = (props: FileSelectorViewProps) => (
-      <FileSelector {...props} {...handlerProps} {...internalProps} />
-    );
-
-    Component.displayName = "FileSelectorWrapper";
-
-    return Component;
   };
 
-  // Then in the hook's return:
-  const accept = useMemo(() => buildAcceptString(acceptedTypes), [acceptedTypes]);
-  const BoundFileSelector = useMemo(
-    () =>
-      createFileSelectorComponent({
-        onInputChange,
-        onDragOver,
-        onDrop,
-        onDragEnter,
-        onDragLeave,
-        accept,
-      }),
-    [onInputChange, onDragOver, onDrop, onDragEnter, onDragLeave, accept],
+  const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    processFiles(files);
+    event.target.value = "";
+  };
+
+  const onDrop = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    const { classList } = e.currentTarget;
+    classList.remove("border-yellow-400");
+    classList.add("border-zinc-600");
+    processFiles(Array.from(e.dataTransfer.files));
+  };
+
+  const onDragOver = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const onDragEnter = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    dragDepthRef.current++;
+    const { classList } = e.currentTarget;
+    classList.add("border-yellow-400");
+    classList.remove("border-zinc-600");
+  };
+
+  const onDragLeave = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current > 0) return;
+    const { classList } = e.currentTarget;
+    classList.remove("border-yellow-400");
+    classList.add("border-zinc-600");
+  };
+
+  const acceptRef = useRef(buildAcceptString(acceptedTypes));
+  const BoundFileSelector = ({
+    inputId,
+    messageParagraph,
+    inputClassName,
+    clickableAreaClassName,
+    dropZoneWrapperClassName,
+    messageParagraphClassName,
+    ariaLabel,
+    ariaDescribedBy,
+    ariaLabelButton,
+  }: FileSelectorViewProps) => (
+    <FileSelector
+      inputId={inputId}
+      messageParagraph={messageParagraph}
+      inputClassName={inputClassName}
+      clickableAreaClassName={clickableAreaClassName}
+      dropZoneWrapperClassName={dropZoneWrapperClassName}
+      messageParagraphClassName={messageParagraphClassName}
+      ariaLabel={ariaLabel}
+      ariaDescribedBy={ariaDescribedBy}
+      ariaLabelButton={ariaLabelButton}
+      onChange={onInputChange}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      accept={acceptRef.current}
+    />
   );
+  BoundFileSelector.displayName = "FileSelectorWrapper";
 
   return {
-    //Properties
     validFiles,
     invalidFiles,
-
-    //Methods
     clearCache,
     getValidFileStreams,
     onCancel,
@@ -313,14 +243,10 @@ export const useFileSelector = ({
     onRemoveFile,
     clearBlobs,
     clearBlob: clearBlobFromMemory,
-
-    //Errors
     maxUploadError: maxUploadErrorRef.current,
     maxFileSizeError: maxFileSizeErrorRef.current,
     setMaximumFileSizeExceeded,
     setMaximumUploadsExceeded,
-
-    //Component - Export the FileSelector
     FileSelector: BoundFileSelector,
   };
 };

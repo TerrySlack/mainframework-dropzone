@@ -1,6 +1,5 @@
 import resolve from "@rollup/plugin-node-resolve";
-import typescript from "@rollup/plugin-typescript";
-import dts from "rollup-plugin-dts";
+import babel from "@rollup/plugin-babel";
 import postcss from "rollup-plugin-postcss";
 
 export default [
@@ -18,10 +17,14 @@ export default [
         extensions: ['.js', '.jsx', '.ts', '.tsx'],
         browser: true,
       }),
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        declarationDir: undefined,
+      babel({
+        babelHelpers: "bundled",
+        extensions: [".js", ".jsx", ".ts", ".tsx"],
+        plugins: ["babel-plugin-react-compiler"],
+        presets: [
+          ["@babel/preset-react", { runtime: "automatic", development: false }],
+          ["@babel/preset-typescript"],
+        ],
       }),
       postcss({
         inject: true,  // Injects CSS into <head> at runtime
@@ -33,14 +36,5 @@ export default [
       "react-dom",
       "react/jsx-runtime",
     ],
-  },
-  {
-    input: "src/index.ts",
-    output: {
-      file: "dist/index.d.ts",
-      format: "es",
-    },
-    plugins: [dts()],
-    external: [/\.css$/],
   },
 ];
