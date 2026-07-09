@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent } from "react";
+import type { ChangeEvent, DragEvent } from "react";
 
 /** Props for styling, copy, and accessibility on the dropzone. Used by the `FileSelector` returned from `useFileSelector`. */
 export interface FileSelectorViewProps {
@@ -14,7 +14,6 @@ export interface FileSelectorViewProps {
   ariaDescribedBy?: string;
   /** Accessible label for the file input button when messageParagraph is not sufficient */
   ariaLabelButton?: string;
-  ariaLabelledBy?: string;
 }
 
 /** File input and drag-and-drop handlers; supplied internally by `useFileSelector` to the presentational component. */
@@ -36,7 +35,6 @@ export interface FileSelectorProps extends FileSelectorViewProps, FileSelectorHa
 
 //Incoming Props
 export interface IFileUploaderProps {
-  acceptTypes?: string;
   maximumUploadCount?: number;
   maximumFileSize?: number;
   acceptedTypes?: Record<string, string>;

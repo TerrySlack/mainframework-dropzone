@@ -125,6 +125,39 @@ describe("FileSelector", () => {
   it("uses custom aria labels when provided", () => {
     render(<FileSelector {...defaultHandlers} ariaLabel="Custom drop zone" ariaLabelButton="Custom choose files" />);
     expect(screen.getByRole("group", { name: "Custom drop zone" })).toBeInTheDocument();
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Custom choose files" })).toBeInTheDocument();
+  });
+
+  it("ariaDescribedBy sets aria-describedby on the group", () => {
+    render(<FileSelector {...defaultHandlers} ariaDescribedBy="help-text" />);
+    expect(screen.getByRole("group")).toHaveAttribute("aria-describedby", "help-text");
+  });
+
+  it("inputId sets id on input and aria-controls on button", () => {
+    render(<FileSelector {...defaultHandlers} inputId="my-input" />);
+    expect(document.querySelector("input#my-input")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAttribute("aria-controls", "my-input");
+  });
+
+  it("messageParagraphClassName applies to the paragraph element", () => {
+    render(<FileSelector {...defaultHandlers} messageParagraphClassName="custom-msg-class" />);
+    const para = screen.getByText("Drag 'n' drop some files here, or click to select files");
+    expect(para).toHaveClass("custom-msg-class");
+  });
+
+  it("inputClassName applies to the hidden input", () => {
+    render(<FileSelector {...defaultHandlers} inputClassName="custom-input-class" />);
+    const input = document.querySelector('input[type="file"]');
+    expect(input).toHaveClass("custom-input-class");
+  });
+
+  it("input has the multiple attribute", () => {
+    render(<FileSelector {...defaultHandlers} />);
+    expect(document.querySelector('input[type="file"]')).toHaveAttribute("multiple");
+  });
+
+  it("input has aria-hidden set to true", () => {
+    render(<FileSelector {...defaultHandlers} />);
+    expect(document.querySelector('input[type="file"]')).toHaveAttribute("aria-hidden", "true");
   });
 });

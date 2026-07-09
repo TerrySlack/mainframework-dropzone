@@ -3,16 +3,14 @@ import {
   defaultTypeExtensions,
   maximumUploadCount,
   maximumFileSize,
-  printableMaximumFileSize,
   isValidFileType,
   hasSurpassedMaxSize,
   checkFilesMaximumSize,
   createUrlString,
   clearBlobFromMemory,
-  createUrlStringWithAutoCleanup,
-  SvgXmlnsAttributeCheck,
+  createUrlStringWithClear,
+  svgXmlnsAttributeCheck,
   renameFile,
-  checkFile,
 } from "../../src/shared/utils/processUploadedFiles";
 
 describe("processUploadedFiles", () => {
@@ -30,9 +28,6 @@ describe("processUploadedFiles", () => {
     });
     it("maximumFileSize is 5MB", () => {
       expect(maximumFileSize).toBe(5e6);
-    });
-    it("printableMaximumFileSize is human readable", () => {
-      expect(printableMaximumFileSize).toBe("5 Megabytes");
     });
   });
 
@@ -104,36 +99,29 @@ describe("processUploadedFiles", () => {
       clearBlobFromMemory(file);
       expect(() => URL.revokeObjectURL(url)).not.toThrow();
     });
+
+    it("does not throw when called on an unregistered file", () => {
+      const file = new File([], "unregistered.png", { type: "image/png" });
+      expect(() => clearBlobFromMemory(file)).not.toThrow();
+    });
   });
 
-  describe("createUrlStringWithAutoCleanup", () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it("returns url and cancel function", () => {
+  describe("createUrlStringWithClear", () => {
+    it("returns url and clear function", () => {
       const file = new File(["content"], "test.png", { type: "image/png" });
-      const result = createUrlStringWithAutoCleanup(file, 1000);
-      expect(result.url).toMatch(/^blob:/);
-      expect(typeof result.cancel).toBe("function");
-    });
+      const result = createUrlStringWithClear(file);
 
-    it("cancel revokes the URL and prevents auto-cleanup", () => {
-      const file = new File(["content"], "test.png", { type: "image/png" });
-      const result = createUrlStringWithAutoCleanup(file, 1000);
-      result.cancel();
-      jest.runAllTimers();
       expect(result.url).toMatch(/^blob:/);
+      expect(typeof result.clear).toBe("function");
+
+      result.clear();
     });
   });
 
   describe("SvgXmlnsAttributeCheck", () => {
     it("returns document data for non-SVG files", async () => {
       const pngFile = new File(["fake-png"], "test.png", { type: "image/png" });
-      const result = await SvgXmlnsAttributeCheck(pngFile);
+      const result = await svgXmlnsAttributeCheck(pngFile);
       expect(result).not.toBeNull();
       expect(result!.id).toBe("test");
       expect(result!.type).toBe(".png");
@@ -144,7 +132,7 @@ describe("processUploadedFiles", () => {
     it("returns document data for SVG with xmlns", async () => {
       const svgWithXmlns = '<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>';
       const svgFile = new File([svgWithXmlns], "test.svg", { type: "image/svg+xml" });
-      const result = await SvgXmlnsAttributeCheck(svgFile);
+      const result = await svgXmlnsAttributeCheck(svgFile);
       expect(result).not.toBeNull();
       expect(result!.id).toBe("test");
       expect(result!.type).toBe(".svg");
@@ -153,7 +141,7 @@ describe("processUploadedFiles", () => {
     it("adds xmlns to SVG without it", async () => {
       const svgWithoutXmlns = "<svg><circle r='5'/></svg>";
       const svgFile = new File([svgWithoutXmlns], "test.svg", { type: "image/svg+xml" });
-      const result = await SvgXmlnsAttributeCheck(svgFile);
+      const result = await svgXmlnsAttributeCheck(svgFile);
       expect(result).not.toBeNull();
       expect(result!.file).toBeInstanceOf(File);
       const modifiedFile = result!.file as File;
@@ -164,50 +152,66 @@ describe("processUploadedFiles", () => {
     it("returns null for unsupported file type in custom types", async () => {
       const customTypes = { "image/png": ".png" } as Record<string, string>;
       const svgFile = new File(["<svg xmlns='http://www.w3.org/2000/svg'/>"], "test.svg", { type: "image/svg+xml" });
-      const result = await SvgXmlnsAttributeCheck(svgFile, customTypes);
+      const result = await svgXmlnsAttributeCheck(svgFile, customTypes);
       expect(result).toBeNull();
+    });
+
+    it("adds xmlns to SVG with uppercase <SVG> tag", async () => {
+      const svgUppercase = "<SVG><circle r='5'/></SVG>";
+      const svgFile = new File([svgUppercase], "test.svg", { type: "image/svg+xml" });
+      const result = await svgXmlnsAttributeCheck(svgFile);
+      expect(result).not.toBeNull();
+      expect(result!.file).toBeInstanceOf(File);
+      const content = await (result!.file as File).text();
+      expect(content).toContain("xmlns=");
     });
   });
 
   describe("renameFile", () => {
     it("creates new File with new name when different", () => {
       const blob = new Blob(["x"], { type: "text/plain" });
-      const result = renameFile(blob, "newname.txt");
+      const result = renameFile("newname.txt", blob);
       expect(result).toBeInstanceOf(File);
-      expect(result.name).toBe("newname.txt");
+      expect((result as File).name).toBe("newname.txt");
     });
 
     it("returns same File when name already matches", () => {
       const file = new File(["x"], "same.txt", { type: "text/plain" });
-      const result = renameFile(file, "same.txt");
+      const result = renameFile("same", file);
       expect(result).toBe(file);
     });
   });
 
-  describe("checkFile", () => {
+  describe("renameFile", () => {
     it("returns file as-is when id is empty", () => {
       const file = new File(["x"], "test.png", { type: "image/png" });
-      expect(checkFile("", file)).toBe(file);
+      expect(renameFile("", file)).toBe(file);
     });
 
     it("renames File when id differs from filename (without extension)", () => {
       const file = new File(["x"], "old.png", { type: "image/png" });
-      const result = checkFile("new", file);
+      const result = renameFile("new", file);
       expect(result).toBeInstanceOf(File);
-      expect((result as File).name).toBe("new");
+      expect((result as File).name).toBe("new.png");
     });
 
     it("returns same File when id matches filename without extension", () => {
       const file = new File(["x"], "myname.png", { type: "image/png" });
-      const result = checkFile("myname", file);
+      const result = renameFile("myname", file);
       expect(result).toBe(file);
     });
 
     it("converts Blob to File with id when file is Blob", () => {
       const blob = new Blob(["x"], { type: "text/plain" });
-      const result = checkFile("myid", blob);
+      const result = renameFile("myid", blob);
       expect(result).toBeInstanceOf(File);
       expect((result as File).name).toBe("myid");
+    });
+
+    it("returns same File when filename has no extension and id matches", () => {
+      const file = new File(["x"], "README", { type: "text/plain" });
+      const result = renameFile("README", file);
+      expect(result).toBe(file);
     });
   });
 });

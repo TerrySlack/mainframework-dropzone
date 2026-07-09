@@ -1,5 +1,5 @@
 /// <reference types="jest" />
-import { renderHook, act, render, fireEvent } from "@testing-library/react";
+import { renderHook, act, render, fireEvent, waitFor } from "@testing-library/react";
 import { useFileSelector } from "../../src/shared/hooks/useFileSelector";
 
 describe("useFileSelector", () => {
@@ -151,5 +151,197 @@ describe("useFileSelector", () => {
     });
 
     expect(result.current.validFiles.length).toBeGreaterThan(0);
+  });
+
+  it("onIdChange renames a file at a given index", async () => {
+    const { result } = renderHook(() => useFileSelector());
+    const FileSelectorComponent = result.current.FileSelector;
+    const { container } = render(<FileSelectorComponent />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const pngFile = new File(["x"], "original.png", { type: "image/png" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [pngFile] } });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.validFiles.length).toBeGreaterThan(0);
+
+    act(() => {
+      result.current.onIdChange(0, "renamed", result.current.validFiles);
+    });
+
+    expect(result.current.validFiles[0].id).toBe("renamed");
+  });
+
+  it("clearCache resets error flags in addition to file arrays", async () => {
+    const { result } = renderHook(() => useFileSelector({ maximumUploadCount: 1, maximumFileSize: 5e6 }));
+    const FileSelectorComponent = result.current.FileSelector;
+    const { container } = render(<FileSelectorComponent />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const files = [new File(["a"], "a.png", { type: "image/png" }), new File(["b"], "b.png", { type: "image/png" })];
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files } });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.maxUploadError.status).toBe(true);
+
+    act(() => {
+      result.current.clearCache();
+    });
+
+    expect(result.current.maxUploadError.status).toBe(false);
+    expect(result.current.maxFileSizeError.status).toBe(false);
+    expect(result.current.validFiles).toEqual([]);
+    expect(result.current.invalidFiles).toEqual([]);
+  });
+
+  it("invalid file type populates invalidFiles and not validFiles", async () => {
+    const { result } = renderHook(() => useFileSelector());
+    const FileSelectorComponent = result.current.FileSelector;
+    const { container } = render(<FileSelectorComponent />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const txtFile = new File(["hello"], "test.txt", { type: "text/plain" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [txtFile] } });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.invalidFiles.length).toBeGreaterThan(0);
+    expect(result.current.validFiles.length).toBe(0);
+  });
+
+  it("setMaximumFileSizeExceeded sets and clears the error", () => {
+    const { result } = renderHook(() => useFileSelector());
+
+    act(() => {
+      result.current.setMaximumFileSizeExceeded(true);
+    });
+
+    expect(result.current.maxFileSizeError.status).toBe(true);
+    expect(result.current.maxFileSizeError.message).toContain("size");
+
+    act(() => {
+      result.current.setMaximumFileSizeExceeded(false);
+    });
+
+    expect(result.current.maxFileSizeError.status).toBe(false);
+    expect(result.current.maxFileSizeError.message).toBe("");
+  });
+
+  it("setMaximumUploadsExceeded sets and clears the error", () => {
+    const { result } = renderHook(() => useFileSelector());
+
+    act(() => {
+      result.current.setMaximumUploadsExceeded(true, 5, 3);
+    });
+
+    expect(result.current.maxUploadError.status).toBe(true);
+    expect(result.current.maxUploadError.message).toContain("maximum");
+
+    act(() => {
+      result.current.setMaximumUploadsExceeded(false);
+    });
+
+    expect(result.current.maxUploadError.status).toBe(false);
+    expect(result.current.maxUploadError.message).toBe("");
+  });
+
+  it("onCancel clears validFiles and invalidFiles", async () => {
+    const { result } = renderHook(() => useFileSelector());
+    const FileSelectorComponent = result.current.FileSelector;
+    const { container } = render(<FileSelectorComponent />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const pngFile = new File(["x"], "test.png", { type: "image/png" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [pngFile] } });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.validFiles.length).toBeGreaterThan(0);
+
+    act(() => {
+      result.current.onCancel();
+    });
+
+    expect(result.current.validFiles).toEqual([]);
+    expect(result.current.invalidFiles).toEqual([]);
+  });
+
+  it("clearBlob does not throw when called on a valid file", async () => {
+    const { result } = renderHook(() => useFileSelector());
+    const FileSelectorComponent = result.current.FileSelector;
+    const { container } = render(<FileSelectorComponent />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const pngFile = new File(["x"], "test.png", { type: "image/png" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [pngFile] } });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    if (result.current.validFiles.length > 0) {
+      expect(() => result.current.clearBlob(result.current.validFiles[0].file as File)).not.toThrow();
+    }
+  });
+
+  it("custom acceptedTypes produces correct accept attribute on input", () => {
+    const customTypes = { "text/plain": ".txt", "image/gif": ".gif" };
+    const { result } = renderHook(() => useFileSelector({ acceptedTypes: customTypes }));
+    const FileSelectorComponent = result.current.FileSelector;
+    const { container } = render(<FileSelectorComponent />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const acceptValue = input.getAttribute("accept") ?? "";
+    expect(acceptValue).toContain(".txt");
+    expect(acceptValue).toContain(".gif");
+  });
+
+  it("SVG without xmlns is accepted and has xmlns injected", async () => {
+    const { result } = renderHook(() => useFileSelector());
+    const FileSelectorComponent = result.current.FileSelector;
+    const { container } = render(<FileSelectorComponent />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const svgFile = new File(["<svg><circle r='5'/></svg>"], "test.svg", { type: "image/svg+xml" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [svgFile] } });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.validFiles.length).toBeGreaterThan(0);
+    });
+    const processedFile = result.current.validFiles[0].file as File;
+    const content = await processedFile.text();
+    expect(content).toContain("xmlns=");
   });
 });
