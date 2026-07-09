@@ -177,7 +177,7 @@ describe("processUploadedFiles", () => {
 
     it("returns same File when name already matches", () => {
       const file = new File(["x"], "same.txt", { type: "text/plain" });
-      const result = renameFile("same.txt", file);
+      const result = renameFile("same", file);
       expect(result).toBe(file);
     });
   });
