@@ -3,7 +3,6 @@ import {
   defaultTypeExtensions,
   maximumUploadCount,
   maximumFileSize,
-  printableMaximumFileSize,
   isValidFileType,
   hasSurpassedMaxSize,
   checkFilesMaximumSize,
@@ -12,7 +11,6 @@ import {
   createUrlStringWithClear,
   svgXmlnsAttributeCheck,
   renameFile,
-  checkFile,
 } from "../../src/shared/utils/processUploadedFiles";
 
 describe("processUploadedFiles", () => {
@@ -30,9 +28,6 @@ describe("processUploadedFiles", () => {
     });
     it("maximumFileSize is 5MB", () => {
       expect(maximumFileSize).toBe(5e6);
-    });
-    it("printableMaximumFileSize is human readable", () => {
-      expect(printableMaximumFileSize).toBe("5 Megabytes");
     });
   });
 
@@ -175,47 +170,47 @@ describe("processUploadedFiles", () => {
   describe("renameFile", () => {
     it("creates new File with new name when different", () => {
       const blob = new Blob(["x"], { type: "text/plain" });
-      const result = renameFile(blob, "newname.txt");
+      const result = renameFile("newname.txt", blob);
       expect(result).toBeInstanceOf(File);
-      expect(result.name).toBe("newname.txt");
+      expect((result as File).name).toBe("newname.txt");
     });
 
     it("returns same File when name already matches", () => {
       const file = new File(["x"], "same.txt", { type: "text/plain" });
-      const result = renameFile(file, "same.txt");
+      const result = renameFile("same.txt", file);
       expect(result).toBe(file);
     });
   });
 
-  describe("checkFile", () => {
+  describe("renameFile", () => {
     it("returns file as-is when id is empty", () => {
       const file = new File(["x"], "test.png", { type: "image/png" });
-      expect(checkFile("", file)).toBe(file);
+      expect(renameFile("", file)).toBe(file);
     });
 
     it("renames File when id differs from filename (without extension)", () => {
       const file = new File(["x"], "old.png", { type: "image/png" });
-      const result = checkFile("new", file);
+      const result = renameFile("new", file);
       expect(result).toBeInstanceOf(File);
-      expect((result as File).name).toBe("new");
+      expect((result as File).name).toBe("new.png");
     });
 
     it("returns same File when id matches filename without extension", () => {
       const file = new File(["x"], "myname.png", { type: "image/png" });
-      const result = checkFile("myname", file);
+      const result = renameFile("myname", file);
       expect(result).toBe(file);
     });
 
     it("converts Blob to File with id when file is Blob", () => {
       const blob = new Blob(["x"], { type: "text/plain" });
-      const result = checkFile("myid", blob);
+      const result = renameFile("myid", blob);
       expect(result).toBeInstanceOf(File);
       expect((result as File).name).toBe("myid");
     });
 
     it("returns same File when filename has no extension and id matches", () => {
       const file = new File(["x"], "README", { type: "text/plain" });
-      const result = checkFile("README", file);
+      const result = renameFile("README", file);
       expect(result).toBe(file);
     });
   });

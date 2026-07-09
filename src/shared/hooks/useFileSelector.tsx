@@ -10,12 +10,15 @@ import {
   checkFilesMaximumSize,
   isValidFileType,
   svgXmlnsAttributeCheck,
-  checkFile,
   clearBlobFromMemory,
   createUrlString,
+  renameFile,
 } from "../utils/processUploadedFiles";
 
 import { FileSelector } from "../components/FileSelector";
+
+const defaultBorder = "border-gray-500";
+const defaultAlternateBorder = "border-zinc-600";
 
 export const useFileSelector = ({
   maximumUploadCount = maxUploadCount,
@@ -27,6 +30,8 @@ export const useFileSelector = ({
   const [invalidFiles, SetInvalidFiles] = useState<File[]>([]);
 
   const dragDepthRef = useRef(0);
+  const callIdRef = useRef(0);
+  const borderClassRef = useRef(defaultAlternateBorder);
 
   const maxUploadErrorRef = useRef<ErrorMessage>({
     status: false,
@@ -79,6 +84,7 @@ export const useFileSelector = ({
   const getValidFileStreams = () => (validFiles.length ? validFiles.map(({ file }: FileData) => file) : []);
 
   const processFiles = (files: File[]) => {
+    const callId = ++callIdRef.current;
     const maxFileSizeCheck = checkFilesMaximumSize(files, maximumFileSize);
 
     if (maxFileSizeCheck) {
@@ -88,14 +94,14 @@ export const useFileSelector = ({
       SetValidFiles([]);
       SetInvalidFiles([]);
     } else {
-      const valid: Promise<FileData | null>[] = [];
+      const valid: { file: File; promise: Promise<FileData | null> }[] = [];
       const invalid: File[] = [];
 
       let i = 0;
       while (i < files.length) {
         const file = files[i];
         if (isValidFileType(file, acceptedTypes)) {
-          valid.push(svgXmlnsAttributeCheck(file, acceptedTypes));
+          valid.push({ file, promise: svgXmlnsAttributeCheck(file, acceptedTypes) });
         } else {
           invalid.push(file);
         }
@@ -103,16 +109,23 @@ export const useFileSelector = ({
       }
 
       if (valid.length > 0) {
-        Promise.all(valid)
+        Promise.all(valid.map((v) => v.promise))
           .then((results) => {
+            if (callId !== callIdRef.current) return;
             const filteredResults: FileData[] = [];
+            const nullFiles: File[] = [];
             let j = 0;
             while (j < results.length) {
               const result = results[j];
               if (result !== null) {
                 filteredResults.push(result);
+              } else {
+                nullFiles.push(valid[j].file);
               }
               j++;
+            }
+            if (nullFiles.length > 0) {
+              SetInvalidFiles((state) => state.concat(nullFiles));
             }
             SetValidFiles((current) => {
               if (current.length + filteredResults.length > maximumUploadCount) {
@@ -122,9 +135,8 @@ export const useFileSelector = ({
               return current.concat(filteredResults);
             });
           })
-          .catch((error) => {
-            console.error("File processing error:", error);
-            SetInvalidFiles((state) => state.concat(files));
+          .catch(() => {
+            SetInvalidFiles((state) => state.concat(valid.map((v) => v.file)));
           });
       }
 
@@ -155,7 +167,7 @@ export const useFileSelector = ({
     const updatedValidFiles = files.map((fileData: FileData, i: number) => {
       if (i === index) {
         if (fileData.file instanceof File) clearBlobFromMemory(fileData.file);
-        const renamedFile = checkFile(id, fileData.file);
+        const renamedFile = renameFile(id, fileData.file);
         const newUrl = renamedFile instanceof File ? createUrlString(renamedFile) : fileData.url;
         return { ...fileData, file: renamedFile, id, url: newUrl };
       }
@@ -174,8 +186,8 @@ export const useFileSelector = ({
     e.preventDefault();
     dragDepthRef.current = 0;
     const { classList } = e.currentTarget;
-    classList.remove("border-yellow-400");
-    classList.add("border-zinc-600");
+    classList.remove(defaultBorder);
+    classList.add(borderClassRef.current);
     processFiles(Array.from(e.dataTransfer.files));
   };
 
@@ -188,8 +200,8 @@ export const useFileSelector = ({
     e.preventDefault();
     dragDepthRef.current++;
     const { classList } = e.currentTarget;
-    classList.add("border-yellow-400");
-    classList.remove("border-zinc-600");
+    classList.remove(borderClassRef.current);
+    classList.add(defaultBorder);
   };
 
   const onDragLeave = (e: DragEvent<HTMLButtonElement>) => {
@@ -197,8 +209,8 @@ export const useFileSelector = ({
     dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
     if (dragDepthRef.current > 0) return;
     const { classList } = e.currentTarget;
-    classList.remove("border-yellow-400");
-    classList.add("border-zinc-600");
+    classList.remove(defaultBorder);
+    classList.add(borderClassRef.current);
   };
 
   const acceptRef = useRef(buildAcceptString(acceptedTypes));
@@ -212,25 +224,28 @@ export const useFileSelector = ({
     ariaLabel,
     ariaDescribedBy,
     ariaLabelButton,
-  }: FileSelectorViewProps) => (
-    <FileSelector
-      inputId={inputId}
-      messageParagraph={messageParagraph}
-      inputClassName={inputClassName}
-      clickableAreaClassName={clickableAreaClassName}
-      dropZoneWrapperClassName={dropZoneWrapperClassName}
-      messageParagraphClassName={messageParagraphClassName}
-      ariaLabel={ariaLabel}
-      ariaDescribedBy={ariaDescribedBy}
-      ariaLabelButton={ariaLabelButton}
-      onChange={onInputChange}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      accept={acceptRef.current}
-    />
-  );
+  }: FileSelectorViewProps) => {
+    borderClassRef.current = clickableAreaClassName ?? defaultAlternateBorder;
+    return (
+      <FileSelector
+        inputId={inputId}
+        messageParagraph={messageParagraph}
+        inputClassName={inputClassName}
+        clickableAreaClassName={clickableAreaClassName}
+        dropZoneWrapperClassName={dropZoneWrapperClassName}
+        messageParagraphClassName={messageParagraphClassName}
+        ariaLabel={ariaLabel}
+        ariaDescribedBy={ariaDescribedBy}
+        ariaLabelButton={ariaLabelButton}
+        onChange={onInputChange}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+        accept={acceptRef.current}
+      />
+    );
+  };
   BoundFileSelector.displayName = "FileSelectorWrapper";
 
   return {

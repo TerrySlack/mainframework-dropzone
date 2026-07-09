@@ -6,8 +6,8 @@ import { mergeStyles } from "../../utils/mergeStyles";
 import "./tailwind.css";
 
 import { withDragDefaults } from "../../utils/dragAndDrop";
-const defaultAccept =
-  ".png, .jpeg, .pdf, .svg, image/svg+xml, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+import { buildAcceptString, defaultTypeExtensions } from "../../utils/processUploadedFiles";
+const defaultAccept = buildAcceptString(defaultTypeExtensions);
 
 const SCOPE_CLASS = "file-selector-scope";
 const defaultInputClassName = "hiddenInput";

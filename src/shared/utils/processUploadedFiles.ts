@@ -1,7 +1,9 @@
+export const hasSurpassedMaxSize = (file: File | Blob, maxSize = maximumFileSize): boolean => file.size > maxSize;
+
 //Use this to quickly get the file extensions
 //Devs can pass their own custom type mappings to override these defaults
 
-export const defaultTypeExtensions: Record<string, string> = {
+export const defaultTypeExtensions: Readonly<Record<string, string>> = {
   "image/png": ".png",
   "image/jpeg": ".jpeg",
   "image/svg+xml": ".svg",
@@ -15,12 +17,11 @@ const xmlns = '<svg xmlns="http://www.w3.org/2000/svg"';
 
 export const maximumUploadCount = 30;
 export const maximumFileSize = 5e6; //5 mb's
-export const printableMaximumFileSize = "5 Megabytes";
 
 export const formatFileSize = (bytes: number): string => {
-  if (bytes >= 1e9) return `${bytes / 1e9} Gigabytes`;
-  if (bytes >= 1e6) return `${bytes / 1e6} Megabytes`;
-  if (bytes >= 1e3) return `${bytes / 1e3} Kilobytes`;
+  if (bytes >= 1e9) return `${Math.round(bytes / 1e9)} Gigabytes`;
+  if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} Megabytes`;
+  if (bytes >= 1e3) return `${Math.round(bytes / 1e3)} Kilobytes`;
   return `${bytes} Bytes`;
 };
 
@@ -186,30 +187,29 @@ export const svgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExt
 // FILE RENAMING
 
 /*
- * Renames a file or blob. Optimized to avoid unnecessary File creation
- * if name already matches.
- */
-export const renameFile = (file: Blob, name: string): File =>
-  file instanceof File && file.name === name ? file : new File([file], name, { type: file.type });
-
-/*
  * Checks if file needs renaming based on ID comparison.
  * - Handles Blobs (no name) by converting to File
  * - Avoids repeated string operations
  * - Case-sensitive comparison
  */
-export const checkFile = (id: string, file: File | Blob): File | Blob => {
+export const renameFile = (id: string, file: File | Blob): File | Blob => {
   // No ID provided, return as-is
   if (!id) return file;
 
-  // Handle Blob (not a File subclass)
+  //It's a blob
   if (!(file instanceof File)) {
-    return renameFile(file, id);
+    return rename(id, file);
   }
-
-  // It's a File - check if renaming is needed
   const currentId = getFileId(file.name);
   if (id === currentId) return file;
-  const ext = file.name.slice(file.name.lastIndexOf("."));
-  return renameFile(file, `${id}${ext}`);
+  const lastDot = file.name.lastIndexOf(".");
+  const ext = lastDot === -1 ? (defaultTypeExtensions[file.type] ?? "") : file.name.slice(lastDot);
+  return rename(`${id}${ext}`, file);
 };
+
+/*
+ * Renames a file or blob. Optimized to avoid unnecessary File creation
+ * if name already matches.
+ */
+const rename = (id: string, file: File | Blob): File =>
+  file instanceof File && file.name === id ? file : new File([file], id, { type: file.type });
