@@ -7,13 +7,13 @@ A React package that allows for the selection of files through drag and drop or 
 ```bash
 npm i @mainframework/dropzone
 # or
-yarn add @mainframework/dropzone
+pnpm add @mainframework/dropzone
 ```
 
 ## Running Tests
 
 ```bash
-yarn test
+pnpm test
 # or
 npm run test
 ```
