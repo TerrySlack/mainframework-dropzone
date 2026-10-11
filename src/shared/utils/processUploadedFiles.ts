@@ -6,6 +6,7 @@ export const hasSurpassedMaxSize = (file: File | Blob, maxSize = maximumFileSize
 export const defaultTypeExtensions: Readonly<Record<string, string>> = {
   "image/png": ".png",
   "image/jpeg": ".jpeg",
+  "image/jpg": ".jpg",
   "image/svg+xml": ".svg",
   "application/pdf": ".pdf",
   "application/msword": ".doc",
@@ -53,6 +54,8 @@ export const buildAcceptString = (acceptedTypes: Record<string, string>): string
 // TYPE DEFINITIONS
 
 type TypeExtensions = Readonly<Record<string, string>>;
+
+const defaultExtensionListLower: readonly string[] = Object.values(defaultTypeExtensions).map((e) => e.toLowerCase());
 
 // HELPER: Extract file ID (filename without extension)
 
@@ -111,10 +114,24 @@ export const createUrlStringWithClear = (file: File) => ({
  * Checks if file type is in accepted types map.
  * Uses Object.hasOwn for better performance than Boolean() conversion.
  */
-export const isValidFileType = (file: File, acceptedTypes: TypeExtensions = defaultTypeExtensions): boolean => {
+export const isValidFileType = (
+  file: File,
+  acceptedTypes: TypeExtensions = defaultTypeExtensions,
+  extensionListLower?: readonly string[],
+): boolean => {
   if (Object.hasOwn(acceptedTypes, file.type)) return true;
   const ext = "." + file.name.split(".").pop()?.toLowerCase();
-  return Object.values(acceptedTypes).some((e) => e.toLowerCase() === ext);
+  const list =
+    extensionListLower ??
+    (acceptedTypes === defaultTypeExtensions
+      ? defaultExtensionListLower
+      : Object.values(acceptedTypes).map((e) => e.toLowerCase()));
+  let i = 0;
+  while (i < list.length) {
+    if (list[i] === ext) return true;
+    i++;
+  }
+  return false;
 };
 
 /*
@@ -137,9 +154,32 @@ export const checkFilesMaximumSize = (files: readonly (File | Blob)[], max = max
  * Creates document data object with file metadata.
  * Returns null if file type is not in allowableTypes to prevent invalid state.
  */
-const createDocumentData = (file: File, allowableTypes: TypeExtensions = defaultTypeExtensions) => {
-  const type = allowableTypes[file.type];
-  if (!type) return null;
+const createDocumentData = (
+  file: File,
+  allowableTypes: TypeExtensions = defaultTypeExtensions,
+  extensionListLower: readonly string[] = defaultExtensionListLower,
+) => {
+  let type = allowableTypes[file.type];
+  if (!type) {
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    let matched = false;
+    let i = 0;
+    while (i < extensionListLower.length) {
+      if (extensionListLower[i] === ext) {
+        matched = true;
+        break;
+      }
+      i++;
+    }
+    if (!matched) return null;
+    for (const v of Object.values(allowableTypes)) {
+      if (v.toLowerCase() === ext) {
+        type = v;
+        break;
+      }
+    }
+    if (!type) return null;
+  }
 
   return {
     id: getFileId(file.name),
@@ -153,9 +193,13 @@ const createDocumentData = (file: File, allowableTypes: TypeExtensions = default
  * Optimized SVG xmlns check - only reads first 2KB initially.
  * Avoids toLowerCase() allocation and uses safer regex for replacement.
  */
-export const svgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExtensions = defaultTypeExtensions) => {
+export const svgXmlnsAttributeCheck = async (
+  file: File,
+  allowableTypes: TypeExtensions = defaultTypeExtensions,
+  extensionListLower: readonly string[] = defaultExtensionListLower,
+) => {
   if (file.type !== "image/svg+xml") {
-    return createDocumentData(file, allowableTypes);
+    return createDocumentData(file, allowableTypes, extensionListLower);
   }
 
   // OPTIMIZATION: Only read first 2KB to check for xmlns
@@ -164,15 +208,15 @@ export const svgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExt
 
   // No toLowerCase() needed - xmlns attribute is case-sensitive in XML
   if (/<svg\b[^>]*\bxmlns\s*=/i.test(text)) {
-    return createDocumentData(file, allowableTypes);
+    return createDocumentData(file, allowableTypes, extensionListLower);
   }
 
-  // Missing the xmlns attribute, add it
-  // Need full file content for modification
   const fullText = await file.text();
 
-  // SAFER: Use regex with word boundary instead of simple string replace
-  // Handles <svg> or <SVG> without space and various attribute orders
+  if (/<svg\b[^>]*\bxmlns\s*=/i.test(fullText)) {
+    return createDocumentData(file, allowableTypes, extensionListLower);
+  }
+
   const svgWithXmlns = fullText.replace(/<svg\b/i, xmlns);
 
   clearBlobFromMemory(file);
@@ -181,6 +225,7 @@ export const svgXmlnsAttributeCheck = async (file: File, allowableTypes: TypeExt
       type: file.type,
     }),
     allowableTypes,
+    extensionListLower,
   );
 };
 

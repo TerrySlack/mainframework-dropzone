@@ -10,6 +10,15 @@ npm i @mainframework/dropzone
 pnpm add @mainframework/dropzone
 ```
 
+## Breaking changes (2.0.0)
+
+- **`maxFileSizeError`** also reflects file read/processing failures (for example SVG processing). Always show `maxFileSizeError.message` in your UI; do not assume the text is only about file size.
+- **`setMaximumFileSizeExceeded(status, message?)`** — optional second argument sets a custom message when `status` is `true`.
+- **`FileSelector`** is exported from `@mainframework/dropzone` for custom wiring (handlers and validation remain your responsibility when not using the hook’s bound component).
+- New hook option **`allowMultiple`** (default `true`). New view props on `FileSelector`: **`disabled`**, **`dragActiveClassName`**, and **`multiple`** (when using the standalone component).
+- **`FileData.type`** is the canonical extension string from your accept map (for example `".png"`), not necessarily the file’s MIME type.
+- Default accept map includes **`image/jpg`** → `.jpg` in addition to `image/jpeg` → `.jpeg`.
+
 ## Running Tests
 
 ```bash
@@ -27,6 +36,7 @@ const { ... } = useFileSelector({
   maximumUploadCount: 5,      // Default: 30
   maximumFileSize: 5e6,       // Default: 5 MB
   acceptedTypes: defaultTypeExtensions,  // MIME type -> extension map, see below
+  allowMultiple: true,        // Default: true
 });
 ```
 
@@ -60,7 +70,7 @@ The hook returns the following:
 
 | Export         | Type         | Description                                                                                                   |
 | -------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
-| `validFiles`   | `FileData[]` | Files that passed validation (accepted type, size, and count). Each item has `id`, `file`, `url`, and `type`. |
+| `validFiles`   | `FileData[]` | Files that passed validation (accepted type, size, and count). Each item has `id`, `file`, `url`, and `type` (extension string from the accept map). |
 | `invalidFiles` | `File[]`     | Files the user selected that failed validation (wrong type or rejected).                                      |
 
 ### Methods
@@ -80,15 +90,15 @@ The hook returns the following:
 | Export                       | Type                                                                      | Description                                                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `maxUploadError`             | `{ status: boolean; message: string }`                                    | Reflects whether the max upload count was exceeded. Check `status` and show `message` in your UI.           |
-| `maxFileSizeError`           | `{ status: boolean; message: string }`                                    | Reflects whether a file exceeded the max size. Check `status` and show `message` in your UI.                |
+| `maxFileSizeError`           | `{ status: boolean; message: string }`                                    | Max size exceeded or file processing failed. Show `message` in your UI.                                     |
 | `setMaximumUploadsExceeded`  | `(status?: boolean, fileCount?: number, maximumUploads?: number) => void` | Sets the max upload error state. Call with `true` and counts to show the error; call with `false` to clear. |
-| `setMaximumFileSizeExceeded` | `(status?: boolean) => void`                                              | Sets the max file size error state. Call with `true` to show the error; call with `false` to clear.         |
+| `setMaximumFileSizeExceeded` | `(status?: boolean, message?: string) => void`                            | Sets the max file size / processing error. Optional `message` when `status` is `true`; call with `false` to clear. |
 
 ### Component
 
 | Export         | Description                                                                                                                    |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `FileSelector` | A pre-wired dropzone component returned **only** from `useFileSelector()` (not a separate import from `@mainframework/dropzone`). Renders a clickable area and hidden file input, with file and drag-and-drop handlers bound to that hook instance. |
+| `FileSelector` | From `useFileSelector()` (pre-wired) or `import { FileSelector } from "@mainframework/dropzone"` (you supply handlers). |
 
 ### FileSelector props (`FileSelectorViewProps`)
 
@@ -105,6 +115,10 @@ The `FileSelector` from the hook accepts **view-only** props (styling, copy, acc
 | `ariaLabel`                 | `string` | "File upload drop zone"                                   | Accessible name for the drop zone.           |
 | `ariaDescribedBy`           | `string` | —                                                         | ID of element that describes the drop zone.  |
 | `ariaLabelButton`           | `string` | "Choose files to upload"                                  | Accessible label for the button.             |
+| `dragActiveClassName`       | `string` | `border-gray-500`                                         | Extra classes on the button while dragging.  |
+| `disabled`                  | `boolean` | `false`                                                  | Disables the dropzone button.                |
+
+The drop zone group uses `aria-describedby` pointing at the message paragraph when `ariaDescribedBy` is omitted.
 
 ## Default Accepted Types
 
@@ -195,6 +209,7 @@ If you need types externally, the package exports:
 - `IFileUploaderProps`
 - `FileSelectorViewProps`
 - `FileSelectorHandlerProps`
+- `FileSelectorProps`
 
 ## Manipulating validFiles in a Preview Component
 

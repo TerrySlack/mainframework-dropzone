@@ -8,8 +8,10 @@ export interface FileSelectorViewProps {
   clickableAreaClassName?: string;
   dropZoneWrapperClassName?: string;
   messageParagraphClassName?: string;
-  /** Accessible name for the drop zone region (default: "File upload") */
+  /** Accessible name for the drop zone region (default: "File upload drop zone") */
   ariaLabel?: string;
+  dragActiveClassName?: string;
+  disabled?: boolean;
   /** ID of element that describes the drop zone (e.g. help text) */
   ariaDescribedBy?: string;
   /** Accessible label for the file input button when messageParagraph is not sufficient */
@@ -28,6 +30,8 @@ export interface FileSelectorHandlerProps {
 /** Internal props injected by `useFileSelector` (not part of the public view props). */
 export interface FileSelectorInternalProps {
   accept?: string;
+  isDragActive?: boolean;
+  multiple?: boolean;
 }
 
 /** Full props for the internal `FileSelector` component (view + handlers). */
@@ -38,6 +42,7 @@ export interface IFileUploaderProps {
   maximumUploadCount?: number;
   maximumFileSize?: number;
   acceptedTypes?: Record<string, string>;
+  allowMultiple?: boolean;
 }
 
 export interface FileData {
