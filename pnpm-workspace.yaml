@@ -6,3 +6,6 @@ allowBuilds:
   unrs-resolver: false
 
 autoInstallPeers: true
+
+minimumReleaseAgeExclude:
+  - '@mainframework/is-deep-equal@1.1.1'
