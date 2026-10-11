@@ -133,6 +133,30 @@ describe("FileSelector", () => {
     expect(screen.getByRole("group")).toHaveAttribute("aria-describedby", "help-text");
   });
 
+  it("defaults aria-describedby to message paragraph id", () => {
+    render(<FileSelector {...defaultHandlers} />);
+    const para = screen.getByText("Drag 'n' drop some files here, or click to select files");
+    expect(screen.getByRole("group")).toHaveAttribute("aria-describedby", para.id);
+  });
+
+  it("does not open file dialog when disabled", () => {
+    render(<FileSelector {...defaultHandlers} disabled />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const clickSpy = jest.spyOn(input, "click");
+    fireEvent.click(screen.getByRole("button", { name: /Drag 'n' drop|Choose files/ }));
+    expect(clickSpy).not.toHaveBeenCalled();
+  });
+
+  it("applies dragActiveClassName when isDragActive", () => {
+    render(<FileSelector {...defaultHandlers} isDragActive dragActiveClassName="drag-active-test" />);
+    expect(screen.getByRole("button")).toHaveClass("drag-active-test");
+  });
+
+  it("omits multiple when multiple is false", () => {
+    render(<FileSelector {...defaultHandlers} multiple={false} />);
+    expect(document.querySelector('input[type="file"]')).not.toHaveAttribute("multiple");
+  });
+
   it("inputId sets id on input and aria-controls on button", () => {
     render(<FileSelector {...defaultHandlers} inputId="my-input" />);
     expect(document.querySelector("input#my-input")).toBeInTheDocument();
@@ -154,6 +178,11 @@ describe("FileSelector", () => {
   it("input has the multiple attribute", () => {
     render(<FileSelector {...defaultHandlers} />);
     expect(document.querySelector('input[type="file"]')).toHaveAttribute("multiple");
+  });
+
+  it("uses a custom accept attribute when provided", () => {
+    render(<FileSelector {...defaultHandlers} accept=".gif,image/gif" />);
+    expect(document.querySelector('input[type="file"]')).toHaveAttribute("accept", ".gif,image/gif");
   });
 
   it("input has aria-hidden set to true", () => {

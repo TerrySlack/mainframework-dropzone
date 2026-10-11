@@ -10,5 +10,18 @@
     "^@mainframework/is-deep-equal$": "<rootDir>/tests/__mocks__/is-deep-equal.ts"
   },
   "testEnvironment": "jsdom",
-  "setupFilesAfterEnv": ["<rootDir>/tests/setup.ts"]
+  "setupFilesAfterEnv": ["<rootDir>/tests/setup.ts"],
+  "collectCoverageFrom": [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/**/*.css"
+  ],
+  "coverageThreshold": {
+    "global": {
+      "statements": 90,
+      "branches": 90,
+      "functions": 90,
+      "lines": 90
+    }
+  }
 }

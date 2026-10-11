@@ -19,6 +19,7 @@ const defaultMessageParagraph = "Drag 'n' drop some files here, or click to sele
 
 const defaultAriaLabel = "File upload drop zone";
 const defaultAriaLabelButton = "Choose files to upload";
+const defaultDragActiveClassName = "border-gray-500";
 
 export const FileSelector = ({
   inputId,
@@ -31,6 +32,10 @@ export const FileSelector = ({
   ariaLabel = defaultAriaLabel,
   ariaDescribedBy,
   ariaLabelButton = defaultAriaLabelButton,
+  dragActiveClassName = defaultDragActiveClassName,
+  disabled = false,
+  isDragActive = false,
+  multiple = true,
   onChange,
   onDragOver,
   onDrop,
@@ -42,9 +47,10 @@ export const FileSelector = ({
 
   //Note, eslint doesn't like that I'm wrapping the anonymous function in withDragDefaults.  Ignore for now
 
-  const internalOnClick = withDragDefaults(() => {
+  const internalOnClick = () => {
+    if (disabled) return;
     fileInputRef.current?.click();
-  });
+  };
 
   const internalOnDrop = withDragDefaults((e: DragEvent<HTMLButtonElement>) => {
     onDrop(e);
@@ -65,6 +71,7 @@ export const FileSelector = ({
   const inputClasses = mergeStyles(defaultInputClassName, inputClassName);
   const resolvedClickableAreaClassName = mergeStyles(
     clickableAreaClassName ?? defaultClickableAreaClassName,
+    isDragActive ? dragActiveClassName : undefined,
     "w-full h-full flex-1 min-h-0",
   );
   const resolvedDropZoneWrapperClassName = mergeStyles(dropZoneWrapperClassName ?? defaultDropZoneWrapperClassName);
@@ -76,13 +83,14 @@ export const FileSelector = ({
     <div
       role="group"
       aria-label={ariaLabel}
-      aria-describedby={ariaDescribedBy}
+      aria-describedby={ariaDescribedBy ?? messageId}
       className={mergeStyles(SCOPE_CLASS, resolvedDropZoneWrapperClassName)}
       draggable={false}
     >
       <button
         type="button"
         className={resolvedClickableAreaClassName}
+        disabled={disabled}
         onClick={internalOnClick}
         onDragOver={internalOnDragOver}
         onDrop={internalOnDrop}
@@ -104,7 +112,7 @@ export const FileSelector = ({
         className={inputClasses}
         onChange={onChange}
         accept={accept}
-        multiple
+        multiple={multiple}
         aria-hidden="true"
         tabIndex={-1}
       />
