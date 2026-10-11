@@ -1,6 +1,6 @@
 {
   "name": "@mainframework/dropzone",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A file selection package, without all of the re-rendering issues that come with other dropzone packages",
   "type": "module",
   "module": "./dist/index.js",
