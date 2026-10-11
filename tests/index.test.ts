@@ -1,5 +1,5 @@
 /// <reference types="jest" />
-import { useFileSelector, FileSelector } from "../src/index";
+import { useFileSelector, FileSelector, defaultTypeExtensions } from "../src/index";
 
 describe("index", () => {
   it("exports useFileSelector", () => {
@@ -10,5 +10,10 @@ describe("index", () => {
   it("exports FileSelector", () => {
     expect(FileSelector).toBeDefined();
     expect(typeof FileSelector).toBe("function");
+  });
+
+  it("exports defaultTypeExtensions", () => {
+    expect(defaultTypeExtensions).toBeDefined();
+    expect(defaultTypeExtensions["image/png"]).toBe(".png");
   });
 });
