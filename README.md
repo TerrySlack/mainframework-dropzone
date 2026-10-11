@@ -10,6 +10,11 @@ npm i @mainframework/dropzone
 pnpm add @mainframework/dropzone
 ```
 
+## Requirements
+
+- **React** `>= 19` (peer dependency)
+- ESM package: import from `@mainframework/dropzone`
+
 ## Breaking changes (2.0.0)
 
 - **`maxFileSizeError`** also reflects file read/processing failures (for example SVG processing). Always show `maxFileSizeError.message` in your UI; do not assume the text is only about file size.
@@ -19,12 +24,17 @@ pnpm add @mainframework/dropzone
 - **`FileData.type`** is the canonical extension string from your accept map (for example `".png"`), not necessarily the file’s MIME type.
 - Default accept map includes **`image/jpg`** → `.jpg` in addition to `image/jpeg` → `.jpeg`.
 
+See also [Selection and validation behavior](#selection-and-validation-behavior) and [Standalone `FileSelector`](#standalone-fileselector).
+
 ## Running Tests
 
 ```bash
 pnpm test
 # or
 npm run test
+pnpm test:coverage
+# or
+npm run test:coverage
 ```
 
 ## Hook Configuration
@@ -32,13 +42,21 @@ npm run test
 The `useFileSelector` hook accepts optional configuration:
 
 ```ts
+import { useFileSelector, defaultTypeExtensions } from "@mainframework/dropzone";
+
 const { ... } = useFileSelector({
   maximumUploadCount: 5,      // Default: 30
   maximumFileSize: 5e6,       // Default: 5 MB
-  acceptedTypes: defaultTypeExtensions,  // MIME type -> extension map, see below
+  acceptedTypes: defaultTypeExtensions,  // MIME type -> extension map; omit to use the built-in default
   allowMultiple: true,        // Default: true
 });
 ```
+
+Omit `acceptedTypes` to use the built-in default map (same values as `defaultTypeExtensions`).
+
+`acceptedTypes` is read when the hook mounts; changing the object after mount without remounting the hook does not refresh accept validation.
+
+Single-file selection: `useFileSelector({ allowMultiple: false })`.
 
 ## Minimal Usage
 
@@ -71,27 +89,27 @@ The hook returns the following:
 | Export         | Type         | Description                                                                                                   |
 | -------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
 | `validFiles`   | `FileData[]` | Files that passed validation (accepted type, size, and count). Each item has `id`, `file`, `url`, and `type` (extension string from the accept map). |
-| `invalidFiles` | `File[]`     | Files the user selected that failed validation (wrong type or rejected).                                      |
+| `invalidFiles` | `File[]`     | Files that failed validation or processing; accumulates until cleared. Includes wrong type and processing failures. |
 
 ### Methods
 
 | Export                | Signature                                                | Description                                                                                    |
 | --------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `clearCache`          | `() => void`                                             | Clears both `validFiles` and `invalidFiles`, and revokes blob URLs to free memory.             |
-| `getValidFileStreams` | `() => (File \| Blob)[]`                                 | Returns the raw `File` or `Blob` instances from `validFiles` for upload or further processing. |
+| `getValidFileStreams` | `() => (File \| Blob)[]`                                 | Returns the raw `File` or `Blob` instances from `validFiles`; returns an empty array when there are no valid files. |
 | `onCancel`            | `() => void`                                             | Same as `clearCache`; use when the user cancels selection.                                     |
 | `onIdChange`          | `(index: number, id: string, files: FileData[]) => void` | Renames a file by ID. Pass the index, new ID, and current `validFiles` array.                  |
 | `onRemoveFile`        | `(index: number) => void`                                | Removes the file at the given index from `validFiles` and revokes its blob URL.                |
-| `clearBlobs`          | `() => void`                                             | Revokes blob URLs for all valid files to free memory. Does not clear the arrays.               |
-| `clearBlob`           | `(file: File) => void`                                   | Revokes the blob URL for a single `File` instance.                                             |
+| `clearBlobs`          | `() => void`                                             | Revokes blob URLs for valid entries whose `file` is a `File`. Does not clear the arrays.       |
+| `clearBlob`           | `(file: File) => void`                                   | Revokes the blob URL for a single `File` in the registry. Plain `Blob` entries may have no registered URL. |
 
 ### Error State
 
 | Export                       | Type                                                                      | Description                                                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `maxUploadError`             | `{ status: boolean; message: string }`                                    | Reflects whether the max upload count was exceeded. Check `status` and show `message` in your UI.           |
-| `maxFileSizeError`           | `{ status: boolean; message: string }`                                    | Max size exceeded or file processing failed. Show `message` in your UI.                                     |
-| `setMaximumUploadsExceeded`  | `(status?: boolean, fileCount?: number, maximumUploads?: number) => void` | Sets the max upload error state. Call with `true` and counts to show the error; call with `false` to clear. |
+| `maxFileSizeError`           | `{ status: boolean; message: string }`                                    | Max size exceeded or file processing failed. Default processing message when the hook sets the error without a custom `message`. |
+| `setMaximumUploadsExceeded`  | `(status?: boolean, fileCount?: number, maximumUploads?: number) => void` | When `status` is `true`, pass `fileCount` and `maximumUploads` for the built-in message; call with `false` to clear. |
 | `setMaximumFileSizeExceeded` | `(status?: boolean, message?: string) => void`                            | Sets the max file size / processing error. Optional `message` when `status` is `true`; call with `false` to clear. |
 
 ### Component
@@ -120,12 +138,61 @@ The `FileSelector` from the hook accepts **view-only** props (styling, copy, acc
 
 The drop zone group uses `aria-describedby` pointing at the message paragraph when `ariaDescribedBy` is omitted.
 
+## Styling
+
+- Default UI uses **bundled CSS** imported by `FileSelector`; you do not need Tailwind in your app for the default look.
+- Utility classes are scoped under **`.file-selector-scope`**.
+- Override appearance with `inputClassName`, `clickableAreaClassName`, `dropZoneWrapperClassName`, `messageParagraphClassName`, and `dragActiveClassName` (merged with `clsx` and `tailwind-merge`).
+- The hidden file input uses the `.hiddenInput` class from the bundled stylesheet.
+
+## Standalone `FileSelector`
+
+- **Hook-bound** `FileSelector` (from `useFileSelector()`): pass only **`FileSelectorViewProps`**. The hook supplies handlers, `accept`, `multiple`, and `isDragActive`.
+- **Standalone** `import { FileSelector } from "@mainframework/dropzone"`: you must pass **`FileSelectorHandlerProps`** (`onChange`, `onDragOver`, `onDrop`, `onDragEnter`, `onDragLeave`). File validation and upload logic are your responsibility.
+
+Exported type **`FileSelectorProps`** combines view props, handler props, and `accept`, `isDragActive`, and `multiple`.
+
+### Standalone-only props
+
+| Prop           | Type      | Default                         | Description                                      |
+| -------------- | --------- | ------------------------------- | ------------------------------------------------ |
+| `accept`       | `string`  | built-in default accept string  | `accept` attribute for the hidden file input.    |
+| `multiple`     | `boolean` | `true`                          | Allow selecting more than one file.              |
+| `isDragActive` | `boolean` | `false`                         | Applies `dragActiveClassName` while dragging.    |
+
+```tsx
+import { FileSelector } from "@mainframework/dropzone";
+
+// Prefer useFileSelector() for validation and state; standalone is for custom wiring.
+export function CustomDropzone() {
+  const onChange = () => {};
+  const onDragOver = () => {};
+  const onDrop = () => {};
+  const onDragEnter = () => {};
+  const onDragLeave = () => {};
+
+  return (
+    <FileSelector
+      onChange={onChange}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      multiple={false}
+    />
+  );
+}
+```
+
 ## Default Accepted Types
 
-The package validates files against a MIME type map. You can override it via `acceptedTypes` in the hook config:
+The package validates files against a MIME type map. Import `defaultTypeExtensions` and pass it to `acceptedTypes`, spread it and override keys, or pass your own `Record<string, string>`:
 
 ```ts
-export const defaultTypeExtensions: Record<string, string> = {
+import { defaultTypeExtensions } from "@mainframework/dropzone";
+
+// Built-in default map:
+const defaultMap: Record<string, string> = {
   "image/png": ".png",
   "image/jpeg": ".jpeg",
   "image/jpg": ".jpg",
@@ -134,6 +201,40 @@ export const defaultTypeExtensions: Record<string, string> = {
   "application/msword": ".doc",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 };
+
+// Or use the export directly:
+// acceptedTypes: defaultTypeExtensions
+```
+
+## Selection and validation behavior
+
+| Topic | Behavior |
+| ----- | -------- |
+| **Type validation** | A file is accepted if its MIME type is in `acceptedTypes` **or** its extension matches a value in the map. |
+| **`invalidFiles`** | Accumulates across selections until `clearCache` or `onCancel`. Includes wrong-type files and files that failed processing. |
+| **Max file size** | If any file in a batch exceeds `maximumFileSize`, all `validFiles` and `invalidFiles` are cleared, blob URLs are revoked, and `maxFileSizeError` is set (the message is not updated if the error is already active). |
+| **Max upload count** | If adding a batch would exceed `maximumUploadCount`, existing `validFiles` are kept, new files are not added, and `maxUploadError` is set. |
+| **SVG** | SVGs missing `xmlns` on `<svg>` may get `xmlns` injected. Read or processing failures set `maxFileSizeError` (default message: `One or more files could not be processed. Please try again.`). |
+| **Re-select same file** | The file input value is cleared after each selection so the same file can be chosen again. |
+| **`allowMultiple: false`** | Sets `multiple={false}` on the hook-wired file input. |
+
+```mermaid
+flowchart TD
+  pick[User picks or drops files]
+  sizeCheck{Any file over maximumFileSize?}
+  clearAll[Clear valid and invalid, set maxFileSizeError]
+  validate[Split valid type vs invalid]
+  asyncProcess[SVG and create FileData]
+  countCheck{Would exceed maximumUploadCount?}
+  rejectBatch[Keep current validFiles, set maxUploadError]
+  merge[Append to validFiles, concat invalidFiles]
+  pick --> sizeCheck
+  sizeCheck -->|yes| clearAll
+  sizeCheck -->|no| validate
+  validate --> asyncProcess
+  asyncProcess --> countCheck
+  countCheck -->|yes| rejectBatch
+  countCheck -->|no| merge
 ```
 
 ## Usage Example
@@ -195,7 +296,7 @@ useEffect(() => {
 }, [clearBlobs]);
 ```
 
-- Use `clearCache()` / `onCancel()` to clear files **and** revoke blob URLs.
+- Use `clearCache()` / `onCancel()` to clear files **and** revoke blob URLs, and to clear `maxUploadError` and `maxFileSizeError`.
 - Use `onRemoveFile(index)` to remove one file and revoke its blob URL.
 - Use `clearBlobs()` to revoke blob URLs without clearing the file arrays.
 - Mutating the `validFiles` array directly (for example `validFiles.length = 0`) is not a supported way to clear files/blobs; use `clearCache()` instead so blob URLs are properly revoked.
@@ -210,6 +311,10 @@ If you need types externally, the package exports:
 - `FileSelectorViewProps`
 - `FileSelectorHandlerProps`
 - `FileSelectorProps`
+
+Runtime export:
+
+- `defaultTypeExtensions`
 
 ## Manipulating validFiles in a Preview Component
 
